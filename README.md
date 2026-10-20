@@ -43,6 +43,9 @@ their own phones or on the TV.
   when they have to pick an opponent and who won. A database trigger calls a Supabase Edge
   Function on every change; it reuses the app's own domain code (bundled with esbuild) to work out
   who to notify and records what it sent so nothing is repeated.
+- **Share to the group chat.** The tournament link goes to WhatsApp, the phone's share sheet or the
+  clipboard: offered right after creating the tournament, from the code in the header, and with the
+  standings as text.
 - **TV mode** with the current match, standings and upcoming fixtures in big type.
 - **Installable** as a PWA (manifest, maskable icons, service worker), with an install banner that
   uses the browser prompt on Android/desktop and explains Add to Home Screen on iOS.

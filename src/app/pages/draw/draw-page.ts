@@ -2,6 +2,8 @@ import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TournamentSession } from '../../data/tournament-session';
 import { Wheel } from '../../ui/wheel';
+import { ShareButtons } from '../../ui/share-buttons';
+import { invitationText, tournamentUrl } from '../../domain/share-text';
 import { ConfirmService } from '../../ui/confirm.service';
 import { clubColor } from '../../ui/club-colors';
 import { Tournament } from '../../domain/types';
@@ -26,10 +28,20 @@ interface Reveal {
 
 @Component({
   selector: 'app-draw-page',
-  imports: [Wheel],
+  imports: [Wheel, ShareButtons],
   template: `
     @if (session.tournament(); as t) {
       @if (t.stage === 'draw') {
+        @if (session.isAdmin() && t.draw.picks.length === 0) {
+          <section class="cut mb-8 border-l-4 border-[#25d366] bg-pitch p-4 sm:p-5">
+            <p class="eyebrow text-[#25d366]">Antes de girar</p>
+            <p class="heading mt-1 text-2xl">Pasa el torneo al grupo</p>
+            <p class="mt-1 text-sm text-mist">
+              Con el enlace cada uno sigue el sorteo en directo, dice quién es y recibe un aviso cuando le toca.
+            </p>
+            <div class="mt-3"><app-share-buttons [text]="invitation(t)" [url]="link(t)" [title]="t.name" /></div>
+          </section>
+        }
         <div class="grid gap-8 lg:grid-cols-[1fr_22rem]">
           <section>
             @if (session.isAdmin()) {
@@ -212,6 +224,14 @@ interface Reveal {
   `,
 })
 export class DrawPage {
+  protected link(t: Tournament): string {
+    return tournamentUrl(location.origin, t);
+  }
+
+  protected invitation(t: Tournament): string {
+    return invitationText(t, this.link(t));
+  }
+
   protected readonly session = inject(TournamentSession);
   private readonly router = inject(Router);
   private readonly confirm = inject(ConfirmService);

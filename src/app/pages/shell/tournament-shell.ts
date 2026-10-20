@@ -4,10 +4,12 @@ import { TournamentSession } from '../../data/tournament-session';
 import { Brand } from '../../ui/brand';
 import { ToastService } from '../../ui/toast.service';
 import { StageBadge } from '../../ui/stage-badge';
+import { ShareButtons } from '../../ui/share-buttons';
+import { invitationText, tournamentUrl } from '../../domain/share-text';
 
 @Component({
   selector: 'app-tournament-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Brand, StageBadge],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Brand, StageBadge, ShareButtons],
   providers: [TournamentSession],
   template: `
     @if (session.loading()) {
@@ -30,8 +32,9 @@ import { StageBadge } from '../../ui/stage-badge';
           <button
             type="button"
             class="tag bg-line font-display tracking-[0.2em] text-chalk hover:bg-raised"
-            title="Copiar enlace"
-            (click)="copyLink()"
+            title="Invitar"
+            [attr.aria-expanded]="sharing()"
+            (click)="sharing.set(!sharing())"
           >
             {{ t.id }}
           </button>
@@ -49,6 +52,13 @@ import { StageBadge } from '../../ui/stage-badge';
             {{ session.isAdmin() ? 'Admin' : 'Solo ver' }}
           </button>
         </div>
+
+        @if (sharing()) {
+          <div class="mx-auto max-w-5xl animate-rise px-4 pt-3">
+            <p class="text-sm text-mist">Invita al grupo: con el enlace cada uno ve los partidos y cuándo le toca.</p>
+            <div class="mt-2"><app-share-buttons [text]="invitation()" [url]="link()" [title]="t.name" /></div>
+          </div>
+        }
 
         @if (unlocking() && !session.isAdmin()) {
           <form
@@ -94,6 +104,15 @@ export class TournamentShell {
   readonly id = input.required<string>();
 
   protected readonly unlocking = signal(false);
+  protected readonly sharing = signal(false);
+  protected readonly link = computed(() => {
+    const t = this.session.tournament();
+    return t ? tournamentUrl(location.origin, t) : '';
+  });
+  protected readonly invitation = computed(() => {
+    const t = this.session.tournament();
+    return t ? invitationText(t, this.link()) : '';
+  });
 
   protected readonly tabs = computed(() => {
     const t = this.session.tournament();
@@ -126,13 +145,4 @@ export class TournamentShell {
     }
   }
 
-  protected async copyLink(): Promise<void> {
-    const url = `${location.origin}/t/${this.id().toUpperCase()}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      this.toast.info('Enlace copiado.');
-    } catch {
-      this.toast.info(url);
-    }
-  }
 }
