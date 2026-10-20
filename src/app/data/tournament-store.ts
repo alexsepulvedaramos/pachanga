@@ -14,16 +14,27 @@ export interface RecentTournament {
 const RECENT_KEY = 'pachanga:recent';
 const pinKey = (id: string) => `pachanga:pin:${id}`;
 const meKey = (id: string) => `pachanga:me:${id}`;
+const pushKey = (id: string) => `pachanga:push:${id}`;
 
-/** Routes each tournament to its storage (demo tournaments never leave the browser). */
+const isDemo = (id: string) => id.startsWith(DEMO_PREFIX);
+
+/**
+ * Routes each tournament to its storage and keeps this device's per-tournament memory (PIN, who
+ * you are, recent list). Demo tournaments live only in the current tab and never show up as
+ * recent.
+ */
 @Injectable({ providedIn: 'root' })
 export class TournamentStore {
   private readonly local = inject(LocalTournamentRepository);
   private remote: Promise<TournamentRepository> | null = null;
 
+  constructor() {
+    this.dropLegacyDemos();
+  }
+
   /** The Supabase client is loaded on first use so it stays out of the initial bundle. */
   repo(id: string): Promise<TournamentRepository> {
-    if (id.startsWith(DEMO_PREFIX) || !hasBackend()) return Promise.resolve(this.local);
+    if (isDemo(id) || !hasBackend()) return Promise.resolve(this.local);
     this.remote ??= import('./supabase-tournament-repository').then(
       (m) => new m.SupabaseTournamentRepository(),
     );
@@ -31,6 +42,7 @@ export class TournamentStore {
   }
 
   async create(tournament: Tournament, pin: string): Promise<StoredTournament> {
+    if (isDemo(tournament.id)) this.local.clear(); // one demo at a time
     const stored = await (await this.repo(tournament.id)).create(tournament, pin);
     this.rememberPin(tournament.id, pin);
     this.remember({ id: tournament.id, name: tournament.name });
@@ -44,45 +56,44 @@ export class TournamentStore {
     return stored;
   }
 
+  /** Whether this device created the tournament (it holds the admin PIN). */
+  isOwner(id: string): boolean {
+    return this.savedPin(id) !== null;
+  }
+
+  /** Deletes the tournament for everyone, then forgets it here. */
+  async delete(id: string): Promise<void> {
+    const pin = this.savedPin(id);
+    if (!pin) throw new Error('Solo quien creó el torneo puede borrarlo.');
+    await (await this.repo(id)).delete(id, pin);
+    this.forget(id);
+  }
+
+  /** Removes a tournament from this device only: recent list, PIN and preferences. */
+  forget(id: string): void {
+    this.writeRecent(this.recent().filter((r) => r.id !== id));
+    for (const k of [pinKey(id), meKey(id), pushKey(id)]) this.storage(id)?.removeItem(k);
+  }
+
   savedPin(id: string): string | null {
-    try {
-      return localStorage.getItem(pinKey(id));
-    } catch {
-      return null;
-    }
+    return this.storage(id)?.getItem(pinKey(id)) ?? null;
   }
 
   rememberPin(id: string, pin: string): void {
-    try {
-      localStorage.setItem(pinKey(id), pin);
-    } catch {
-      /* private mode: the PIN lasts for this visit only */
-    }
+    this.set(id, pinKey(id), pin);
   }
 
   forgetPin(id: string): void {
-    try {
-      localStorage.removeItem(pinKey(id));
-    } catch {
-      /* nothing to forget */
-    }
+    this.storage(id)?.removeItem(pinKey(id));
   }
 
   savedIdentity(id: string): string | null {
-    try {
-      return localStorage.getItem(meKey(id));
-    } catch {
-      return null;
-    }
+    return this.storage(id)?.getItem(meKey(id)) ?? null;
   }
 
   rememberIdentity(id: string, participantId: string | null): void {
-    try {
-      if (participantId) localStorage.setItem(meKey(id), participantId);
-      else localStorage.removeItem(meKey(id));
-    } catch {
-      /* private mode: the choice lasts for this visit only */
-    }
+    if (participantId) this.set(id, meKey(id), participantId);
+    else this.storage(id)?.removeItem(meKey(id));
   }
 
   recent(): RecentTournament[] {
@@ -94,11 +105,45 @@ export class TournamentStore {
   }
 
   private remember(entry: RecentTournament): void {
-    const list = [entry, ...this.recent().filter((r) => r.id !== entry.id)].slice(0, 8);
+    if (isDemo(entry.id)) return;
+    this.writeRecent([entry, ...this.recent().filter((r) => r.id !== entry.id)].slice(0, 8));
+  }
+
+  private writeRecent(list: RecentTournament[]): void {
     try {
       localStorage.setItem(RECENT_KEY, JSON.stringify(list));
     } catch {
       /* not critical */
+    }
+  }
+
+  /** Demo data goes with the tab; everything else stays on the device. */
+  private storage(id: string): Storage | null {
+    try {
+      return isDemo(id) ? sessionStorage : localStorage;
+    } catch {
+      return null;
+    }
+  }
+
+  private set(id: string, key: string, value: string): void {
+    try {
+      this.storage(id)?.setItem(key, value);
+    } catch {
+      /* private mode: lasts for this visit only */
+    }
+  }
+
+  /** Earlier versions kept demos in local storage and in the recent list: clear them out. */
+  private dropLegacyDemos(): void {
+    try {
+      for (const k of Object.keys(localStorage)) {
+        if (k.startsWith('pachanga:') && k.includes(`:${DEMO_PREFIX}`)) localStorage.removeItem(k);
+      }
+      const recent = this.recent();
+      if (recent.some((r) => isDemo(r.id))) this.writeRecent(recent.filter((r) => !isDemo(r.id)));
+    } catch {
+      /* storage unavailable */
     }
   }
 }

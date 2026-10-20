@@ -2,6 +2,7 @@ import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TournamentSession } from '../../data/tournament-session';
 import { Wheel } from '../../ui/wheel';
+import { ConfirmService } from '../../ui/confirm.service';
 import { clubColor } from '../../ui/club-colors';
 import { Tournament } from '../../domain/types';
 import {
@@ -213,6 +214,7 @@ interface Reveal {
 export class DrawPage {
   protected readonly session = inject(TournamentSession);
   private readonly router = inject(Router);
+  private readonly confirm = inject(ConfirmService);
   private readonly wheel = viewChild<Wheel>('wheel');
 
   protected readonly busy = signal(false);
@@ -330,7 +332,13 @@ export class DrawPage {
   /** Injury or expulsion: the partner becomes a solo player and gets a drawn partner per match. */
   protected async disqualify(participantId: string): Promise<void> {
     const name = this.session.personName(participantId);
-    if (!confirm(`¿Dar de baja a ${name}? Su pareja jugará con un invitado sorteado.`)) return;
+    const ok = await this.confirm.ask({
+      title: `Baja de ${name}`,
+      message: 'No podrá volver a jugar en este torneo. Su pareja jugará con un invitado sorteado.',
+      confirmLabel: 'Dar de baja',
+      danger: true,
+    });
+    if (!ok) return;
     await this.session.apply((t) => disqualify(t, participantId));
   }
 

@@ -12,9 +12,13 @@ interface LocalRecord extends StoredTournament {
   pinHash: string;
 }
 
-const key = (id: string) => `pachanga:tournament:${id}`;
+const PREFIX = 'pachanga:tournament:';
+const key = (id: string) => `${PREFIX}${id}`;
 
-/** Browser-only storage: used for the demo and when no backend is configured. */
+/**
+ * Browser-only storage, used for the demo and when no backend is configured. Kept in session
+ * storage: it lives as long as the tab, so a demo disappears when you leave.
+ */
 @Injectable()
 export class LocalTournamentRepository extends TournamentRepository {
   async create(tournament: Tournament, pin: string): Promise<StoredTournament> {
@@ -43,14 +47,26 @@ export class LocalTournamentRepository extends TournamentRepository {
     return !!record && record.pinHash === (await hashPin(id, pin));
   }
 
-  watch(id: string, onChange: (stored: StoredTournament) => void): () => void {
-    const listener = (event: StorageEvent) => {
-      if (event.key !== key(id) || !event.newValue) return;
-      const record = JSON.parse(event.newValue) as LocalRecord;
-      onChange({ tournament: record.tournament, version: record.version });
-    };
-    window.addEventListener('storage', listener);
-    return () => window.removeEventListener('storage', listener);
+  async delete(id: string): Promise<void> {
+    try {
+      sessionStorage.removeItem(key(id));
+    } catch {
+      /* nothing stored */
+    }
+  }
+
+  /** Removes every tournament kept in this tab (used to keep a single demo at a time). */
+  clear(): void {
+    try {
+      for (const k of Object.keys(sessionStorage)) if (k.startsWith(PREFIX)) sessionStorage.removeItem(k);
+    } catch {
+      /* nothing stored */
+    }
+  }
+
+  watch(): () => void {
+    // Session storage belongs to one tab, so there is nobody else to hear from.
+    return () => undefined;
   }
 
   async subscribePush(): Promise<void> {
@@ -63,7 +79,7 @@ export class LocalTournamentRepository extends TournamentRepository {
 
   private read(id: string): LocalRecord | null {
     try {
-      const raw = localStorage.getItem(key(id));
+      const raw = sessionStorage.getItem(key(id));
       return raw ? (JSON.parse(raw) as LocalRecord) : null;
     } catch {
       return null;
@@ -71,6 +87,6 @@ export class LocalTournamentRepository extends TournamentRepository {
   }
 
   private write(record: LocalRecord): void {
-    localStorage.setItem(key(record.tournament.id), JSON.stringify(record));
+    sessionStorage.setItem(key(record.tournament.id), JSON.stringify(record));
   }
 }

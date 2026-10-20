@@ -48,6 +48,9 @@ export abstract class TournamentRepository {
     onReconnect?: () => void,
   ): () => void;
 
+  /** Deletes a tournament for everyone. Needs the admin PIN. */
+  abstract delete(id: string, pin: string): Promise<void>;
+
   /** Registers this device for push notifications addressed to one participant. */
   abstract subscribePush(id: string, participantId: string, subscription: PushSubscriptionJSON): Promise<void>;
   abstract unsubscribePush(endpoint: string): Promise<void>;

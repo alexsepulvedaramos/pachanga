@@ -66,6 +66,13 @@ export class SupabaseTournamentRepository extends TournamentRepository {
     return data === true;
   }
 
+  async delete(id: string, pin: string): Promise<void> {
+    const { data, error } = await this.client.rpc('delete_tournament', { p_id: id, p_pin: pin });
+    if (error) throw new Error('No se ha podido borrar. Revisa la conexión.');
+    if (data === -1) throw new WrongPinError();
+    if (data === -3) throw new PinLockedError();
+  }
+
   async subscribePush(id: string, participantId: string, sub: PushSubscriptionJSON): Promise<void> {
     const { error } = await this.client.rpc('subscribe_push', {
       p_tournament_id: id,

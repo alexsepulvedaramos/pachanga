@@ -4,6 +4,7 @@ import { Brand } from '../../ui/brand';
 import { TournamentStore } from '../../data/tournament-store';
 import { buildDemoTournament, DEMO_PIN } from '../../data/demo';
 import { ToastService } from '../../ui/toast.service';
+import { ConfirmService } from '../../ui/confirm.service';
 
 @Component({
   selector: 'app-home-page',
@@ -40,19 +41,37 @@ import { ToastService } from '../../ui/toast.service';
           </div>
         </form>
 
-        @if (recent.length) {
+        @if (recent().length) {
           <div class="panel animate-rise">
             <h2 class="eyebrow text-mist">Tus torneos</h2>
             <ul class="mt-2 divide-y divide-line">
-              @for (r of recent; track r.id) {
-                <li>
-                  <a
-                    [routerLink]="['/t', r.id]"
-                    class="flex items-center justify-between py-2.5 hover:text-volt"
-                  >
-                    <span class="font-display text-lg font-bold uppercase">{{ r.name }}</span>
-                    <span class="font-display text-sm tracking-widest text-mist">{{ r.id }}</span>
+              @for (r of recent(); track r.id) {
+                <li class="flex items-center gap-2">
+                  <a [routerLink]="['/t', r.id]" class="flex min-w-0 flex-1 items-center justify-between gap-3 py-2.5 hover:text-volt">
+                    <span class="truncate font-display text-lg font-bold uppercase">{{ r.name }}</span>
+                    <span class="shrink-0 font-display text-sm tracking-widest text-mist">{{ r.id }}</span>
                   </a>
+                  @if (r.owner) {
+                    <button
+                      type="button"
+                      class="shrink-0 px-2 py-2 text-mist hover:text-flare"
+                      [attr.aria-label]="'Borrar ' + r.name"
+                      title="Borrar torneo"
+                      (click)="remove(r.id, r.name)"
+                    >
+                      <svg viewBox="0 0 24 24" class="size-4" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="shrink-0 px-2 py-2 text-mist hover:text-chalk"
+                      [attr.aria-label]="'Quitar ' + r.name + ' de la lista'"
+                      title="Quitar de la lista"
+                      (click)="hide(r.id, r.name)"
+                    >
+                      ✕
+                    </button>
+                  }
                 </li>
               }
             </ul>
@@ -72,8 +91,44 @@ export class HomePage {
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
 
+  private readonly confirm = inject(ConfirmService);
+
   protected readonly code = signal('');
-  protected readonly recent = this.store.recent();
+  protected readonly recent = signal(this.list());
+
+  private list() {
+    return this.store.recent().map((r) => ({ ...r, owner: this.store.isOwner(r.id) }));
+  }
+
+  /** Deletes a tournament this device created, for everyone. */
+  protected async remove(id: string, name: string): Promise<void> {
+    const ok = await this.confirm.ask({
+      title: '¿Borrar el torneo?',
+      message: `Se borrará "${name}" para todos: partidos, resultados y avisos. No se puede deshacer.`,
+      confirmLabel: 'Borrar',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await this.store.delete(id);
+      this.recent.set(this.list());
+      this.toast.info('Torneo borrado.');
+    } catch (error) {
+      this.toast.error(error);
+    }
+  }
+
+  /** Someone else's tournament: only forget it on this device. */
+  protected async hide(id: string, name: string): Promise<void> {
+    const ok = await this.confirm.ask({
+      title: '¿Quitar de la lista?',
+      message: `"${name}" desaparecerá de este móvil, pero seguirá existiendo. Puedes volver a entrar con su código.`,
+      confirmLabel: 'Quitar',
+    });
+    if (!ok) return;
+    this.store.forget(id);
+    this.recent.set(this.list());
+  }
 
   protected join(): void {
     const code = this.code().trim().toUpperCase();

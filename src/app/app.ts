@@ -2,13 +2,15 @@ import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ToastService } from './ui/toast.service';
 import { InstallBanner } from './ui/install-banner';
+import { ConfirmDialog } from './ui/confirm-dialog';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, InstallBanner],
+  imports: [RouterOutlet, InstallBanner, ConfirmDialog],
   template: `
     <router-outlet />
     <app-install-banner />
+    <app-confirm-dialog />
     <div
       class="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4"
       aria-live="polite"
