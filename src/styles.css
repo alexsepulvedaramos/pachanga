@@ -17,6 +17,7 @@
   --font-sans: 'Barlow', system-ui, sans-serif;
 
   --animate-rise: rise 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-drop: drop 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-pulse-live: pulse-live 1.4s ease-in-out infinite;
   --animate-flash: flash 0.9s ease-out both;
 
@@ -24,6 +25,16 @@
     from {
       opacity: 0;
       transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes drop {
+    from {
+      opacity: 0;
+      transform: translateY(-12px);
     }
     to {
       opacity: 1;
