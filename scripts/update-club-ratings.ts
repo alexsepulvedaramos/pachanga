@@ -45,7 +45,7 @@ interface ApiPlayer {
 
 async function get<T>(url: string): Promise<T> {
   for (let attempt = 1; ; attempt++) {
-    const res = await fetch(url, { headers: { 'User-Agent': 'popper-cup club ratings' } });
+    const res = await fetch(url, { headers: { 'User-Agent': 'pachanga club ratings' } });
     if (res.ok) return (await res.json()) as T;
     if (attempt === 3) throw new Error(`${res.status} ${res.statusText} for ${url}`);
     await new Promise((r) => setTimeout(r, 2000 * attempt));

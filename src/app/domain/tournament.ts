@@ -14,6 +14,7 @@ import { buildGroupSchedule } from './schedule';
 import { computeStandings, DEFAULT_TIEBREAKERS, StandingRow } from './standings';
 import {
   KnockoutDecision,
+  knockoutFormat,
   MAX_TEAMS,
   MIN_TEAMS,
   nextKnockoutMatches,
@@ -71,7 +72,7 @@ export function createTournament(input: NewTournament): Tournament {
   const participants: Participant[] = names.map((name, i) => ({ id: `p${i + 1}`, name }));
   return {
     id: input.id,
-    name: input.name.trim() || 'P0PPER CUP',
+    name: input.name.trim() || 'Pachanga',
     createdAt: (input.now ?? new Date()).toISOString(),
     stage: 'draw',
     config: input.config,
@@ -248,6 +249,54 @@ export function suspendedFor(t: Tournament, m: Match): Id[] {
     }
   }
   return result;
+}
+
+/** Whether a participant plays in a match: as a member, fixed knockout partner or stand-in. */
+export function playsIn(t: Tournament, m: Match, participantId: Id): boolean {
+  return [m.homeId, m.awayId].some((teamId) => fullLineup(t, m, teamId).includes(participantId));
+}
+
+export type MyTurn =
+  | { kind: 'now'; match: Match }
+  | { kind: 'later'; match: Match; matchesBefore: number; minutes: number }
+  | { kind: 'waiting' }
+  | { kind: 'done' };
+
+/**
+ * Where a participant stands: playing now, playing later (and after how many matches), waiting for
+ * knockout matches that don't exist yet, or with nothing left to play.
+ */
+export function myTurn(t: Tournament, participantId: Id): MyTurn {
+  const pending = t.matches.filter((m) => m.status !== 'done');
+  const index = pending.findIndex((m) => playsIn(t, m, participantId));
+  if (index === 0 || pending[index]?.status === 'live') return { kind: 'now', match: pending[index] };
+  if (index > 0) {
+    const before = pending.slice(0, index);
+    const minutes = before.reduce((sum, m) => sum + matchMinutes(t, m.phase), 0);
+    return { kind: 'later', match: pending[index], matchesBefore: index, minutes };
+  }
+  return t.stage === 'finished' || !teamStillIn(t, participantId) ? { kind: 'done' } : { kind: 'waiting' };
+}
+
+/** False once every team the participant plays for is out (or they withdrew). */
+function teamStillIn(t: Tournament, participantId: Id): boolean {
+  const p = t.participants.find((x) => x.id === participantId);
+  if (!p || p.disqualified || t.stage === 'finished') return false;
+  if (t.stage !== 'knockout' || !t.groupRanking) return true;
+  const format = knockoutFormat(t.teams.length);
+  const alive = (teamId: Id) => {
+    const position = t.groupRanking!.indexOf(teamId) + 1;
+    if (position > format.direct && !format.playoff.includes(position)) return false;
+    const involved = (phase: Match['phase']) =>
+      t.matches.filter((m) => m.phase === phase && [m.homeId, m.awayId].includes(teamId));
+    const lostPlayoff = involved('playoff').some((m) => winnerOf(m) && winnerOf(m) !== teamId);
+    // Semi-final losers still play for third place; the last match ends it either way.
+    const finished = [...involved('third'), ...involved('final')].some((m) => winnerOf(m));
+    return !lostPlayoff && !finished;
+  };
+  return t.teams
+    .filter((x) => x.memberIds.includes(participantId) || x.knockoutPartnerId === participantId)
+    .some((x) => alive(x.id));
 }
 
 export function nextMatch(t: Tournament): Match | null {

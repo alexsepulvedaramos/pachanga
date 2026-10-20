@@ -61,7 +61,7 @@ import { ToastService } from '../../ui/toast.service';
       </section>
 
       <footer class="mt-auto pt-16 text-sm text-mist">
-        <span class="font-display font-bold uppercase tracking-widest">P0PPER CUP</span> · Hecho para
+        <span class="font-display font-bold uppercase tracking-widest">Pachanga</span> · Hecho para
         jugar en casa con los colegas.
       </footer>
     </main>

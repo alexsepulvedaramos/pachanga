@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "popper-cup": {
+    "pachanga": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -40,7 +40,8 @@
                   "maximumError": "8kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "serviceWorker": "ngsw-config.json"
             },
             "development": {
               "optimization": false,
@@ -54,10 +55,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "popper-cup:build:production"
+              "buildTarget": "pachanga:build:production"
             },
             "development": {
-              "buildTarget": "popper-cup:build:development"
+              "buildTarget": "pachanga:build:development"
             }
           },
           "defaultConfiguration": "development"

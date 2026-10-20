@@ -11,8 +11,9 @@ export interface RecentTournament {
   name: string;
 }
 
-const RECENT_KEY = 'popper-cup:recent';
-const pinKey = (id: string) => `popper-cup:pin:${id}`;
+const RECENT_KEY = 'pachanga:recent';
+const pinKey = (id: string) => `pachanga:pin:${id}`;
+const meKey = (id: string) => `pachanga:me:${id}`;
 
 /** Routes each tournament to its storage (demo tournaments never leave the browser). */
 @Injectable({ providedIn: 'root' })
@@ -64,6 +65,23 @@ export class TournamentStore {
       localStorage.removeItem(pinKey(id));
     } catch {
       /* nothing to forget */
+    }
+  }
+
+  savedIdentity(id: string): string | null {
+    try {
+      return localStorage.getItem(meKey(id));
+    } catch {
+      return null;
+    }
+  }
+
+  rememberIdentity(id: string, participantId: string | null): void {
+    try {
+      if (participantId) localStorage.setItem(meKey(id), participantId);
+      else localStorage.removeItem(meKey(id));
+    } catch {
+      /* private mode: the choice lasts for this visit only */
     }
   }
 

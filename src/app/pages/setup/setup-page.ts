@@ -41,6 +41,7 @@ const CLUB_SUGGESTIONS = [
         <h2 class="eyebrow text-cyan">01 · Nombre</h2>
         <input
           class="field mt-3 font-display text-2xl font-bold uppercase"
+          placeholder="La Pachanga del sábado"
           [value]="name()"
           (input)="name.set($any($event.target).value)"
           aria-label="Nombre del torneo"
@@ -245,7 +246,7 @@ export class SetupPage {
   protected readonly phaseLabels = PHASE_LABELS;
   protected readonly phases: (keyof HalfMinutes)[] = ['group', 'playoff', 'semi', 'third', 'final'];
 
-  protected readonly name = signal('P0PPER CUP 4');
+  protected readonly name = signal('');
   protected readonly players = signal<string[]>([]);
   protected readonly clubs = signal<string[]>([]);
   protected readonly tiebreakers = signal<TiebreakCriterion[]>([...DEFAULT_CONFIG.tiebreakers]);

@@ -2,6 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "angular",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist/popper-cup/browser",
+  "outputDirectory": "dist/pachanga/browser",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

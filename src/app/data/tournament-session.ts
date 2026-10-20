@@ -19,6 +19,8 @@ export class TournamentSession {
   readonly saving = signal(false);
   readonly pin = signal<string | null>(null);
   readonly isAdmin = computed(() => this.pin() !== null);
+  /** Who is using this device, chosen by them; remembered per tournament. */
+  readonly me = signal<Id | null>(null);
 
   readonly teams = computed(() => new Map((this.tournament()?.teams ?? []).map((t) => [t.id, t])));
   readonly people = computed(
@@ -65,6 +67,8 @@ export class TournamentSession {
       this.version = stored.version;
       this.tournament.set(stored.tournament);
       this.pin.set(this.store.savedPin(id));
+      const me = this.store.savedIdentity(id);
+      this.me.set(me && stored.tournament.participants.some((p) => p.id === me) ? me : null);
       this.stopWatching = (await this.store.repo(id)).watch(
         id,
         (next) => {
@@ -90,6 +94,13 @@ export class TournamentSession {
       this.pin.set(pin);
     }
     return ok;
+  }
+
+  setMe(participantId: Id | null): void {
+    const t = this.tournament();
+    if (!t) return;
+    this.store.rememberIdentity(t.id, participantId);
+    this.me.set(participantId);
   }
 
   lock(): void {

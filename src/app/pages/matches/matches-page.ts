@@ -1,5 +1,6 @@
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { ToastService } from '../../ui/toast.service';
+import { MyTurnPanel } from '../../ui/my-turn';
 import { RouterLink } from '@angular/router';
 import { TournamentSession } from '../../data/tournament-session';
 import { MatchCard } from '../../ui/match-card';
@@ -12,6 +13,7 @@ import {
   estimatedRemainingMinutes,
   isSolo,
   nextMatch,
+  playsIn,
   redrawStandIn,
   reopenMatch,
   startMatch,
@@ -21,7 +23,7 @@ import { formatClock, formatDuration } from '../../ui/format';
 
 @Component({
   selector: 'app-matches-page',
-  imports: [MatchCard, DecisionPanel, ResultForm, RouterLink],
+  imports: [MatchCard, DecisionPanel, ResultForm, RouterLink, MyTurnPanel],
   template: `
     @if (session.tournament(); as t) {
       @if (t.stage === 'draw') {
@@ -31,6 +33,9 @@ import { formatClock, formatDuration } from '../../ui/format';
           <a routerLink="../ruleta" class="btn-primary mt-5">Ir a la ruleta</a>
         </div>
       } @else {
+        @if (t.stage !== 'finished') {
+          <div class="mb-6"><app-my-turn /></div>
+        }
         <!-- Progress -->
         <div class="flex items-end justify-between gap-4">
           <div>
@@ -118,7 +123,11 @@ import { formatClock, formatDuration } from '../../ui/format';
                       <app-result-form [match]="row.match" (saved)="editing.set(null)" (cancelled)="editing.set(null)" />
                     </div>
                   } @else {
-                    <div class="grid grid-cols-[2rem_1fr_auto_1fr_2rem] items-center gap-2 py-2.5" [class.text-mist]="row.match.status === 'pending'">
+                    <div
+                      class="grid grid-cols-[2rem_1fr_auto_1fr_2rem] items-center gap-2 border-l-4 py-2.5 pl-1"
+                      [class]="row.mine ? 'border-volt bg-volt/10' : 'border-transparent'"
+                      [class.text-mist]="row.match.status === 'pending' && !row.mine"
+                    >
                       <span class="font-display text-sm font-bold text-mist">{{ row.number }}</span>
                       <span class="truncate text-right font-display text-lg font-bold uppercase" [class.text-volt]="row.winner === row.match.homeId">{{ session.teamName(row.match.homeId) }}</span>
                       <span class="heading min-w-16 bg-pitch px-2 py-0.5 text-center text-xl tabular-nums" [class.text-flare]="row.match.status === 'live'">
@@ -190,7 +199,13 @@ export class MatchesPage {
     if (!t) return [];
     const order: Phase[] = ['group', 'playoff', 'semi', 'third', 'final'];
     let number = 0;
-    const numbered = t.matches.map((match) => ({ match, number: ++number, winner: this.winner(match) }));
+    const me = this.session.me();
+    const numbered = t.matches.map((match) => ({
+      match,
+      number: ++number,
+      winner: this.winner(match),
+      mine: !!me && playsIn(t, match, me),
+    }));
     return order
       .map((phase) => ({
         phase,

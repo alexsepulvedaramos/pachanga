@@ -7,6 +7,8 @@ import { Match, Tournament } from './types';
 import {
   assignClub,
   champions,
+  myTurn,
+  playsIn,
   nextToSpin,
   suspendedFor,
   createTournament,
@@ -311,6 +313,48 @@ describe('full tournament', () => {
     t = assignClub(t, ids[0], t.clubs[0]);
     t = finishDraw(t, seededRng(1));
     expect(t.teams.map((x) => x.memberIds.length).sort()).toEqual([1, 2, 2, 2, 2, 2]);
+  });
+
+  it('tells each participant when they play next', () => {
+    const rng = seededRng(6);
+    let t = drawAll(newTournament(12), rng);
+    const first = nextMatch(t)!;
+    const playing = t.teams.find((x) => x.id === first.homeId)!.memberIds[0];
+    expect(myTurn(t, playing)).toMatchObject({ kind: 'now', match: { id: first.id } });
+
+    const resting = t.participants.find((p) => !playsIn(t, first, p.id))!.id;
+    const turn = myTurn(t, resting);
+    expect(turn.kind).toBe('later');
+    if (turn.kind === 'later') {
+      expect(turn.matchesBefore).toBe(t.matches.indexOf(turn.match));
+      expect(turn.minutes).toBe(turn.matchesBefore * 13);
+    }
+
+    t = playThrough(t, rng);
+    expect(myTurn(t, playing).kind).toBe('done');
+  });
+
+  it('reports eliminated players as done and qualified ones as waiting', () => {
+    const rng = seededRng(4);
+    let t = drawAll(newTournament(12), rng);
+    while (t.stage === 'groups') {
+      const m = nextMatch(t)!;
+      t = recordResult(t, m.id, randomResult(m, rng));
+    }
+    // Playoff not created yet: the 3rd still has to choose an opponent.
+    const winner = t.teams.find((x) => x.id === t.groupRanking![0])!.memberIds[0];
+    expect(myTurn(t, winner).kind).toBe('waiting');
+    const decision = currentDecision(t);
+    if (decision?.kind !== 'playoffOpponent') throw new Error('Expected the playoff opponent choice');
+    t = makeChoice(t, { playoffOpponentId: decision.options[0] });
+    t = makeChoice(t, { playoffChooserFirst: true });
+    for (const m of t.matches.filter((x) => x.phase === 'playoff')) {
+      t = recordResult(t, m.id, { homeGoals: 2, awayGoals: 0 });
+    }
+    const playoffLoser = t.matches.find((m) => m.phase === 'playoff')!.awayId;
+    const loserPlayer = t.teams.find((x) => x.id === playoffLoser)!.memberIds[0];
+    expect(myTurn(t, loserPlayer).kind).toBe('done');
+    expect(myTurn(t, winner).kind).toBe('waiting');
   });
 
   it('rejects participant counts outside the supported range', () => {

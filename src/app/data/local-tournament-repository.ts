@@ -12,7 +12,7 @@ interface LocalRecord extends StoredTournament {
   pinHash: string;
 }
 
-const key = (id: string) => `popper-cup:tournament:${id}`;
+const key = (id: string) => `pachanga:tournament:${id}`;
 
 /** Browser-only storage: used for the demo and when no backend is configured. */
 @Injectable()

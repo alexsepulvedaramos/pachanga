@@ -23,7 +23,7 @@ export function buildDemoTournament(): Tournament {
   const rng = seededRng(seed);
   let t = createTournament({
     id: `${DEMO_PREFIX}${newTournamentCode(4)}`,
-    name: 'P0PPER CUP · Demo',
+    name: 'Pachanga · Demo',
     participantNames: NAMES,
     clubs: CLUBS,
     config: { ...DEFAULT_CONFIG, trackScorers: true, seed },
