@@ -24,6 +24,7 @@ function withUnassigned(m: Match): Goal[] {
 
 @Component({
   selector: 'app-result-form',
+  host: { '(document:pointerdown)': 'closeOnOutside($event)' },
   imports: [Stepper],
   template: `
     @let m = match();
@@ -108,7 +109,7 @@ function withUnassigned(m: Match): Goal[] {
                 </li>
               }
             </ul>
-            <div class="mt-1.5 flex flex-wrap gap-1.5">
+            <div class="mt-1.5 flex flex-wrap gap-1.5" [attr.data-player-search]="side.teamId">
               <input
                 class="field min-w-0 flex-1 py-1.5 text-sm"
                 autocomplete="off"
@@ -119,7 +120,6 @@ function withUnassigned(m: Match): Goal[] {
                 [value]="queries()[side.teamId] ?? ''"
                 (input)="setQuery(side.teamId, $any($event.target).value)"
                 (focus)="openFor.set(side.teamId)"
-                (blur)="closeSoon(side.teamId)"
                 (keydown.enter)="$event.preventDefault()"
               />
               <button type="button" class="tag bg-flare px-2 text-ink" (click)="addIncident(side.teamId, 'redCard')">+ Roja</button>
@@ -127,13 +127,12 @@ function withUnassigned(m: Match): Goal[] {
               @if (openFor() === side.teamId && side.squad) {
                 @let options = suggestions(side.teamId, side.squad.players);
                 @if (options.length) {
-                  <ul class="max-h-56 w-full basis-full overflow-y-auto border border-line bg-raised" role="listbox">
+                  <ul class="max-h-56 w-full basis-full overflow-y-auto overscroll-contain border border-line bg-raised" role="listbox">
                     @for (p of options; track p.name) {
                       <li role="option" [attr.aria-selected]="false">
                         <button
                           type="button"
                           class="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-line"
-                          (pointerdown)="$event.preventDefault(); choose(side.teamId, p.name)"
                           (click)="choose(side.teamId, p.name)"
                         >
                           <span class="flex-1 truncate font-medium">{{ p.name }}</span>
@@ -238,11 +237,15 @@ export class ResultForm implements OnInit {
     this.openFor.set(null);
   }
 
-  /** Lets a tap on a suggestion land before the list closes. */
-  protected closeSoon(teamId: Id): void {
-    setTimeout(() => {
-      if (this.openFor() === teamId) this.openFor.set(null);
-    }, 150);
+  /**
+   * Closes the suggestions on a touch anywhere else. Not on blur or on touching the list: on phones
+   * that would pick or close before the list can be scrolled.
+   */
+  protected closeOnOutside(event: PointerEvent): void {
+    const open = this.openFor();
+    if (!open) return;
+    const search = (event.target as Element | null)?.closest('[data-player-search]');
+    if (search?.getAttribute('data-player-search') !== open) this.openFor.set(null);
   }
 
   protected addIncident(teamId: Id, kind: Incident['kind']): void {
