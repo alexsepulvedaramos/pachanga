@@ -20,6 +20,9 @@ import {
   estimatedRemainingMinutes,
   finishDraw,
   isSolo,
+  moveMember,
+  renameClub,
+  swapMembers,
   lineup,
   makeChoice,
   nextMatch,
@@ -453,5 +456,47 @@ describe('tournament sizes', () => {
       clubs: [...CLUBS, 'Napoli'],
       config: { ...DEFAULT_CONFIG, seed: 1 },
     })).toThrow(TournamentError);
+  });
+});
+
+describe('editing pairs', () => {
+  const ready = (players: number) => {
+    const rng = seededRng(9);
+    return drawAll(newTournament(players), rng);
+  };
+
+  it('swaps two players between pairs', () => {
+    const t = ready(12);
+    const [a] = t.teams[0].memberIds;
+    const [b] = t.teams[1].memberIds;
+    const next = swapMembers(t, a, b);
+    expect(next.teams[0].memberIds).toContain(b);
+    expect(next.teams[1].memberIds).toContain(a);
+    expect(next.teams[0].memberIds).toHaveLength(2);
+  });
+
+  it('moves a player into the solo player’s team and leaves the other one solo', () => {
+    const t = ready(11);
+    const solo = t.teams.find((x) => x.memberIds.length === 1)!;
+    const pair = t.teams.find((x) => x.memberIds.length === 2)!;
+    const next = moveMember(t, pair.memberIds[0], solo.id);
+    expect(isSolo(next, solo.id)).toBe(false);
+    expect(isSolo(next, pair.id)).toBe(true);
+    expect(() => moveMember(next, pair.memberIds[1], solo.id)).toThrow(TournamentError);
+  });
+
+  it('renames a club and keeps names unique', () => {
+    const t = ready(12);
+    const next = renameClub(t, t.teams[0].id, 'Napoli');
+    expect(next.teams[0].club).toBe('Napoli');
+    expect(next.clubs).toContain('Napoli');
+    expect(next.clubs).not.toContain(t.teams[0].club);
+    expect(() => renameClub(next, t.teams[1].id, 'napoli')).toThrow(TournamentError);
+  });
+
+  it('waits for the live match to finish', () => {
+    const t = ready(12);
+    const live = startMatch(t, nextMatch(t)!.id, seededRng(1));
+    expect(() => swapMembers(live, t.teams[0].memberIds[0], t.teams[1].memberIds[0])).toThrow(TournamentError);
   });
 });

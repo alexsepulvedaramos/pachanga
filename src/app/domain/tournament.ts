@@ -451,6 +451,86 @@ export function disqualify(t: Tournament, participantId: Id): Tournament {
   return { ...t, participants };
 }
 
+// ---------------------------------------------------------------------------------------------
+// Editing pairs after the draw
+// ---------------------------------------------------------------------------------------------
+
+function assertTeamsEditable(t: Tournament): void {
+  if (t.stage === 'setup' || t.stage === 'draw') throw new TournamentError('Las parejas aún no están hechas.');
+  if (t.stage === 'finished') throw new TournamentError('El torneo ya ha terminado.');
+  if (t.matches.some((m) => m.status === 'live')) {
+    throw new TournamentError('Espera a que termine el partido en juego.');
+  }
+}
+
+function teamOf(t: Tournament, participantId: Id): Team {
+  const found = t.teams.find((x) => x.memberIds.includes(participantId));
+  if (!found) throw new TournamentError(`${participant(t, participantId).name} no está en ninguna pareja.`);
+  return found;
+}
+
+/** Fixed knockout partners only make sense for teams whose members haven't changed. */
+function withMembers(team: Team, memberIds: Id[]): Team {
+  const next: Team = { ...team, memberIds };
+  delete next.knockoutPartnerId;
+  return next;
+}
+
+/** Two participants of different teams swap places. */
+export function swapMembers(t: Tournament, a: Id, b: Id): Tournament {
+  assertTeamsEditable(t);
+  const teamA = teamOf(t, a);
+  const teamB = teamOf(t, b);
+  if (teamA.id === teamB.id) return t;
+  if (participant(t, a).disqualified || participant(t, b).disqualified) {
+    throw new TournamentError('No se puede mover a alguien que se ha dado de baja.');
+  }
+  const swap = (ids: Id[]) => ids.map((id) => (id === a ? b : id === b ? a : id));
+  const teams = t.teams.map((x) =>
+    x.id === teamA.id || x.id === teamB.id ? withMembers(x, swap(x.memberIds)) : x,
+  );
+  return { ...t, teams };
+}
+
+/** Moves a participant from a pair into a team with a free place (a solo player's). */
+export function moveMember(t: Tournament, participantId: Id, teamId: Id): Tournament {
+  assertTeamsEditable(t);
+  const from = teamOf(t, participantId);
+  const to = team(t, teamId);
+  if (from.id === to.id) return t;
+  if (participant(t, participantId).disqualified) {
+    throw new TournamentError('No se puede mover a alguien que se ha dado de baja.');
+  }
+  if (activeMembers(t, to.id).length >= 2) throw new TournamentError(`${to.club} ya tiene pareja completa.`);
+  if (activeMembers(t, from.id).length < 2) {
+    throw new TournamentError(`${from.club} se quedaría sin jugadores.`);
+  }
+  const teams = t.teams.map((x) =>
+    x.id === from.id
+      ? withMembers(x, x.memberIds.filter((id) => id !== participantId))
+      : x.id === to.id
+        ? withMembers(x, [...x.memberIds, participantId])
+        : x,
+  );
+  return { ...t, teams };
+}
+
+/** Changes the club a team plays with. */
+export function renameClub(t: Tournament, teamId: Id, club: string): Tournament {
+  assertTeamsEditable(t);
+  const name = club.trim();
+  const current = team(t, teamId);
+  if (!name) throw new TournamentError('Escribe el nombre del equipo.');
+  if (t.teams.some((x) => x.id !== teamId && x.club.toLowerCase() === name.toLowerCase())) {
+    throw new TournamentError(`${name} ya está en el torneo.`);
+  }
+  return {
+    ...t,
+    clubs: t.clubs.map((c) => (c === current.club ? name : c)),
+    teams: t.teams.map((x) => (x.id === teamId ? { ...x, club: name } : x)),
+  };
+}
+
 function replaceMatch(t: Tournament, updated: Match): Tournament {
   return { ...t, matches: t.matches.map((m) => (m.id === updated.id ? updated : m)) };
 }

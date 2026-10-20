@@ -5,10 +5,15 @@ import { Wheel } from '../../ui/wheel';
 import { ShareButtons } from '../../ui/share-buttons';
 import { invitationText, tournamentUrl } from '../../domain/share-text';
 import { ConfirmService } from '../../ui/confirm.service';
+import { ToastService } from '../../ui/toast.service';
 import { clubColor } from '../../ui/club-colors';
 import { Tournament } from '../../domain/types';
 import {
+  activeMembers,
   assignClub,
+  moveMember,
+  renameClub,
+  swapMembers,
   disqualify,
   drawnPairs,
   finishDraw,
@@ -213,14 +218,53 @@ interface Reveal {
                   ⋯
                 </button>
                 @if (menuFor() === team.id) {
-                  <div class="mt-3 flex basis-full animate-rise flex-wrap gap-2 border-t border-line pl-6 pt-3">
-                    @for (id of team.memberIds; track id) {
-                      @if (!session.people().get(id)?.disqualified) {
-                        <button type="button" class="tag bg-flare/15 px-3 py-1.5 text-flare hover:bg-flare hover:text-ink" (click)="menuFor.set(null); disqualify(id)">
-                          Baja de {{ session.personName(id) }}
-                        </button>
+                  <div class="mt-3 basis-full animate-rise space-y-3 border-t border-line pl-6 pt-3">
+                    <form class="flex gap-2" (submit)="$event.preventDefault(); rename(team.id, clubInput.value)">
+                      <input
+                        #clubInput
+                        class="field min-w-0 flex-1 py-1.5 font-display font-bold uppercase"
+                        [value]="team.club"
+                        [attr.aria-label]="'Equipo de ' + team.club"
+                      />
+                      <button type="submit" class="tag bg-line px-3 text-chalk hover:bg-raised">Cambiar equipo</button>
+                    </form>
+                    <div class="grid gap-2 sm:grid-cols-2">
+                      @for (slot of slots(t, team.id); track $index) {
+                        <label class="block">
+                          <span class="eyebrow text-[0.65rem] text-mist">Jugador {{ $index + 1 }}</span>
+                          <select
+                            class="field mt-0.5 py-1.5"
+                            [value]="slot ?? ''"
+                            (change)="placeIn(team.id, slot, $any($event.target).value, $any($event.target))"
+                          >
+                            @if (!slot) {
+                              <option value="" selected>— Solo, sin pareja —</option>
+                            }
+                            @for (other of t.teams; track other.id) {
+                              <optgroup [label]="other.club">
+                                @for (id of other.memberIds; track id) {
+                                  @if (!session.people().get(id)?.disqualified) {
+                                    <option [value]="id" [selected]="id === slot">{{ session.personName(id) }}</option>
+                                  }
+                                }
+                              </optgroup>
+                            }
+                          </select>
+                        </label>
                       }
-                    }
+                    </div>
+                    <p class="text-xs text-mist">
+                      Elegir a alguien de otra pareja los intercambia. En un hueco libre, se cambia de pareja.
+                    </p>
+                    <div class="flex flex-wrap gap-2">
+                      @for (id of team.memberIds; track id) {
+                        @if (!session.people().get(id)?.disqualified) {
+                          <button type="button" class="tag bg-flare/15 px-3 py-1.5 text-flare hover:bg-flare hover:text-ink" (click)="menuFor.set(null); disqualify(id)">
+                            Baja de {{ session.personName(id) }}
+                          </button>
+                        }
+                      }
+                    </div>
                   </div>
                 }
               }
@@ -243,6 +287,7 @@ export class DrawPage {
   protected readonly session = inject(TournamentSession);
   private readonly router = inject(Router);
   private readonly confirm = inject(ConfirmService);
+  private readonly toast = inject(ToastService);
   private readonly wheel = viewChild<Wheel>('wheel');
 
   protected readonly busy = signal(false);
@@ -360,6 +405,48 @@ export class DrawPage {
   }
 
   /** Injury or expulsion: the partner becomes a solo player and gets a drawn partner per match. */
+  /** Active members of a team, plus an empty place if it plays solo. */
+  protected slots(t: Tournament, teamId: string): (string | null)[] {
+    const members = activeMembers(t, teamId);
+    return members.length < 2 ? [...members, null] : members;
+  }
+
+  /** Puts someone in a team's place: swaps them with its occupant, or moves them into a free place. */
+  protected async placeIn(
+    teamId: string,
+    current: string | null,
+    chosen: string,
+    select: HTMLSelectElement,
+  ): Promise<void> {
+    if (!chosen || chosen === current) return;
+    if (!(await this.confirmPlayed())) {
+      select.value = current ?? '';
+      return;
+    }
+    const ok = await this.session.apply((t) =>
+      current ? swapMembers(t, current, chosen) : moveMember(t, chosen, teamId),
+    );
+    if (!ok) select.value = current ?? '';
+  }
+
+  protected async rename(teamId: string, club: string): Promise<void> {
+    const t = this.session.tournament();
+    if (!t || t.teams.find((x) => x.id === teamId)?.club === club.trim()) return;
+    if (await this.session.apply((x) => renameClub(x, teamId, club))) this.toast.info('Equipo cambiado.');
+  }
+
+  /** Once matches have been played, changing pairs rewrites who played them: ask first. */
+  private async confirmPlayed(): Promise<boolean> {
+    const played = this.session.tournament()?.matches.some((m) => m.status === 'done');
+    if (!played) return true;
+    return this.confirm.ask({
+      title: 'Cambiar parejas',
+      message:
+        'Ya se han jugado partidos. Sus resultados se quedan como están, pero aparecerán con las parejas nuevas.',
+      confirmLabel: 'Cambiar',
+    });
+  }
+
   protected async disqualify(participantId: string): Promise<void> {
     const name = this.session.personName(participantId);
     const ok = await this.confirm.ask({
