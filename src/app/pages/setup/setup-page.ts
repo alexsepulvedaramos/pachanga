@@ -101,7 +101,7 @@ const CLUB_SUGGESTIONS = [
           </button>
         </div>
         @if (picking()) {
-          <app-club-picker [count]="clubSlots().length" (picked)="useClubs($event)" (cancelled)="picking.set(false)" />
+          <app-club-picker [count]="teamCount() || clubSlots().length" (picked)="useClubs($event)" (cancelled)="picking.set(false)" />
         }
         <div class="mt-3 grid gap-2 sm:grid-cols-2">
           @for (club of clubSlots(); track $index; let i = $index) {

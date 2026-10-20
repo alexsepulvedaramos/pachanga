@@ -65,7 +65,7 @@ const LINES: { line: Line; label: string }[] = [
         <ul class="mt-4 space-y-1.5">
           @for (club of list(); track club.id) {
             @let picked = isPicked(club);
-            <li class="bg-raised" [class.ring-2]="picked" [class.ring-volt]="picked">
+            <li class="bg-raised" [class.ring-2]="picked" [class.ring-inset]="picked" [class.ring-volt]="picked">
               <div class="flex items-center gap-3 py-2 pl-2 pr-3">
                 <button
                   type="button"
@@ -119,7 +119,7 @@ const LINES: { line: Line; label: string }[] = [
           Actualizado {{ updated() }}.
         </p>
 
-        <div class="sticky bottom-16 mt-4 flex flex-wrap items-center justify-between gap-3 bg-pitch py-2">
+        <div class="sticky bottom-16 z-10 -mx-4 mt-4 flex flex-wrap items-center justify-between gap-3 bg-pitch px-4 py-2">
           <p class="font-display text-sm font-bold uppercase">
             <span [class.text-volt]="full()">{{ selected().length }}/{{ count() }}</span> elegidos
             @if (selected().length > 1) {
