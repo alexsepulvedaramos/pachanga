@@ -14,6 +14,7 @@ import {
   rateClub,
   type ClubRating,
   type ClubRatingsFile,
+  type ClubSquadsFile,
   type EditionIndexEntry,
   type RatedPlayer,
 } from '../src/app/domain/club-ratings.ts';
@@ -28,6 +29,7 @@ const editionId = (process.argv[2] ?? 'fc26').toLowerCase();
 if (!/^fc\d{2}$/.test(editionId)) throw new Error(`Edition must look like fc26, got "${editionId}"`);
 const edition = `EA SPORTS FC ${editionId.slice(2)}`;
 const output = new URL(`${editionId}.json`, DIR);
+const squadsOutput = new URL(`${editionId}-squads.json`, DIR);
 const indexFile = new URL('index.json', DIR);
 
 interface ApiTeam {
@@ -58,6 +60,7 @@ const teams = filters.teamGroups
   .flatMap((g) => g.teams.map((team) => ({ ...team, league: g.label })));
 
 const clubs: ClubRating[] = [];
+const squads: ClubSquadsFile['clubs'] = [];
 for (const team of teams) {
   const data = await get<{ items: ApiPlayer[] }>(`${API}?locale=en&limit=100&offset=0&team=${team.id}`);
   const squad: RatedPlayer[] = data.items
@@ -68,10 +71,14 @@ for (const team of teams) {
       overall: p.overallRating,
     }));
   const club = rateClub(team.id, team.label, team.league, squad);
-  if (club) clubs.push(club);
+  if (club) {
+    clubs.push(club);
+    squads.push({ id: team.id, name: team.label, players: [...squad].sort((a, b) => b.overall - a.overall) });
+  }
   await new Promise((r) => setTimeout(r, 150));
 }
 clubs.sort((a, b) => b.overall - a.overall || a.name.localeCompare(b.name));
+squads.sort((a, b) => a.name.localeCompare(b.name));
 
 if (clubs.length < MIN_CLUBS) {
   throw new Error(`Only ${clubs.length} clubs rated (expected at least ${MIN_CLUBS}); keeping the old file.`);
@@ -91,7 +98,9 @@ if (previous) {
         `the feed to the next game: run "node scripts/update-club-ratings.ts fcXX" for the new edition.`,
     );
   }
-  if (JSON.stringify(previous.clubs) === JSON.stringify(clubs)) {
+  const previousSquads = existsSync(squadsOutput) ? readFileSync(squadsOutput, 'utf8') : '';
+  const squadsUnchanged = previousSquads.includes(JSON.stringify(squads));
+  if (JSON.stringify(previous.clubs) === JSON.stringify(clubs) && squadsUnchanged) {
     console.log(`${edition}: no changes (${clubs.length} clubs).`);
     process.exit(0);
   }
@@ -105,11 +114,19 @@ const file: ClubRatingsFile = {
 };
 mkdirSync(DIR, { recursive: true });
 writeFileSync(output, JSON.stringify(file) + '\n');
+const squadsFile: ClubSquadsFile = { edition, updatedAt: file.updatedAt, clubs: squads };
+writeFileSync(squadsOutput, JSON.stringify(squadsFile) + '\n');
 
 const index: EditionIndexEntry[] = existsSync(indexFile)
   ? (JSON.parse(readFileSync(indexFile, 'utf8')) as EditionIndexEntry[])
   : [];
-const entry: EditionIndexEntry = { id: editionId, edition, file: `${editionId}.json`, updatedAt: file.updatedAt };
+const entry: EditionIndexEntry = {
+  id: editionId,
+  edition,
+  file: `${editionId}.json`,
+  squadsFile: `${editionId}-squads.json`,
+  updatedAt: file.updatedAt,
+};
 const nextIndex = [entry, ...index.filter((e) => e.id !== editionId)].sort((a, b) => b.id.localeCompare(a.id));
 writeFileSync(indexFile, JSON.stringify(nextIndex, null, 2) + '\n');
 console.log(`${edition}: wrote ${clubs.length} clubs.`);

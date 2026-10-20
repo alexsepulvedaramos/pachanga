@@ -8,6 +8,7 @@ import {
   currentDecision,
   lineup,
   participant,
+  unavailableFor,
 } from '../../../src/app/domain/tournament';
 import type { Match, Tournament } from '../../../src/app/domain/types';
 
@@ -50,17 +51,22 @@ export function buildMessages(t: Tournament): PushMessage[] {
 
   if (now) {
     const players = [...lineup(t, now, now.homeId), ...lineup(t, now, now.awayId)];
+    const out = unavailableFor(t, now);
     for (const id of players) {
       const team = [now.homeId, now.awayId].find((teamId) => lineup(t, now, teamId).includes(id))!;
       const guest = !t.teams.find((x) => x.id === team)!.memberIds.includes(id);
       const partner = lineup(t, now, team).find((x) => x !== id);
+      const missing = out
+        .filter((x) => x.teamId === team)
+        .map((x) => `${x.player} (${x.kind === 'redCard' ? 'roja' : 'lesión'})`);
+      const warning = missing.length ? ` Sin ${missing.join(', ')}.` : '';
       messages.push({
         key: `turn:${now.id}`,
         participantIds: [id],
         title: '¡Te toca!',
         body: guest
-          ? `Juegas de invitado con ${partner ? name(t, partner) : club(t, team)}: ${fixture(t, now)}`
-          : `${fixture(t, now)}. Coge el mando.`,
+          ? `Juegas de invitado con ${partner ? name(t, partner) : club(t, team)}: ${fixture(t, now)}.${warning}`
+          : `${fixture(t, now)}. Coge el mando.${warning}`,
       });
     }
     const next = pending.find((m) => m.id !== now.id);

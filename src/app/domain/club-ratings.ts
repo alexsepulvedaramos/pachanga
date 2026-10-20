@@ -40,11 +40,21 @@ export interface ClubRatingsFile {
   clubs: ClubRating[];
 }
 
+/** Full squads, kept apart from the ratings so the club picker stays light. */
+export interface ClubSquadsFile {
+  edition: string;
+  updatedAt: string;
+  /** Squad of every rated club, best players first. */
+  clubs: { id: number; name: string; players: RatedPlayer[] }[];
+}
+
 /** data/clubs/index.json: the editions available, newest first. */
 export interface EditionIndexEntry {
   id: string;
   edition: string;
   file: string;
+  /** File with the full squads of the same edition. */
+  squadsFile?: string;
   updatedAt: string;
 }
 

@@ -3,7 +3,7 @@ import { TournamentSession } from '../data/tournament-session';
 import { clubColor } from './club-colors';
 import { Match } from '../domain/types';
 import { winnerOf } from '../domain/knockout';
-import { lineup, suspendedFor } from '../domain/tournament';
+import { lineup, unavailableFor } from '../domain/tournament';
 
 /** Big scoreboard for one match: clubs, who plays for each side and the score. */
 @Component({
@@ -40,16 +40,22 @@ import { lineup, suspendedFor } from '../domain/tournament';
                 }
               </li>
             }
-            @for (p of side.suspended; track p.id) {
-              <li class="text-flare line-through decoration-2">
-                {{ p.name }}
-                <span class="tag ml-1 bg-flare text-[0.6rem] text-ink no-underline">{{ p.reason }}</span>
-              </li>
-            }
-            @if (side.players.length === 1 && side.suspended.length && m.status !== 'done') {
-              <li class="text-xs text-flare">Juega solo este partido</li>
-            }
           </ul>
+          @if (side.unavailable.length && m.status !== 'done') {
+            <div class="mt-2" [class]="big() ? 'text-lg' : 'text-xs'">
+              <p class="eyebrow text-flare" [class.text-sm]="big()">No disponibles</p>
+              <ul class="mt-0.5 space-y-0.5">
+                @for (x of side.unavailable; track x.player) {
+                  <li class="text-flare">
+                    <span class="line-through decoration-2">{{ x.player }}</span>
+                    <span class="tag ml-1 text-[0.6rem] text-ink" [class]="x.kind === 'redCard' ? 'bg-flare' : 'bg-gold'">
+                      {{ x.kind === 'redCard' ? 'Roja' : 'Lesión' }}
+                    </span>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
         </div>
       }
     </div>
@@ -64,15 +70,7 @@ export class MatchCard {
     const m = this.match();
     const t = this.session.tournament()!;
     const winner = winnerOf(m);
-    const suspended = suspendedFor(t, m);
-    const reasonFor = (id: string) => {
-      const incident = t.matches
-        .slice(0, t.matches.findIndex((x) => x.id === m.id))
-        .reverse()
-        .flatMap((x) => x.incidents ?? [])
-        .find((x) => x.participantId === id);
-      return incident?.kind === 'injury' ? 'Lesionado' : 'Expulsado';
-    };
+    const unavailable = unavailableFor(t, m);
     return [m.homeId, m.awayId].map((teamId) => {
       const team = t.teams.find((x) => x.id === teamId)!;
       const lineupIds = lineup(t, m, teamId);
@@ -86,9 +84,7 @@ export class MatchCard {
           name: this.session.personName(id),
           guest: !team.memberIds.includes(id),
         })),
-        suspended: suspended
-          .filter((id) => team.memberIds.includes(id) || team.knockoutPartnerId === id)
-          .map((id) => ({ id, name: this.session.personName(id), reason: reasonFor(id) })),
+        unavailable: unavailable.filter((x) => x.teamId === teamId),
       };
     });
   });

@@ -1,6 +1,7 @@
 import { Component, computed, inject, input, OnInit, output, signal } from '@angular/core';
 import { TournamentSession } from '../../data/tournament-session';
 import { Stepper } from '../../ui/stepper';
+import { ClubSquads } from '../../data/club-squads';
 import { Goal, Id, Incident, Match } from '../../domain/types';
 import { lineup, recordResult } from '../../domain/tournament';
 
@@ -62,34 +63,45 @@ import { lineup, recordResult } from '../../domain/tournament';
 
     <details class="mt-5 border-t border-line pt-4" [open]="incidents().length > 0">
       <summary class="eyebrow cursor-pointer text-mist">Expulsiones y lesiones</summary>
-      <p class="mt-1 text-xs text-mist">Quien se marque se pierde el siguiente partido de su equipo (salvo la final).</p>
-      <div class="mt-3 grid grid-cols-2 gap-4">
-        @for (side of sides(); track side.teamId) {
-          <ul class="space-y-1.5">
-            @for (pid of side.players; track pid) {
-              <li class="flex items-center gap-1.5">
-                <span class="flex-1 truncate text-sm">{{ session.personName(pid) }}</span>
-                <button
-                  type="button"
-                  class="tag"
-                  [class]="incident(pid) === 'redCard' ? 'bg-flare text-ink' : 'bg-line text-mist'"
-                  [attr.aria-pressed]="incident(pid) === 'redCard'"
-                  (click)="toggleIncident(pid, 'redCard')"
-                >
-                  Roja
-                </button>
-                <button
-                  type="button"
-                  class="tag"
-                  [class]="incident(pid) === 'injury' ? 'bg-gold text-ink' : 'bg-line text-mist'"
-                  [attr.aria-pressed]="incident(pid) === 'injury'"
-                  (click)="toggleIncident(pid, 'injury')"
-                >
-                  Lesión
-                </button>
-              </li>
+      <p class="mt-1 text-xs text-mist">
+        Futbolistas del juego que han visto roja o se han lesionado. No podrán jugar el siguiente partido de su club (salvo la final).
+      </p>
+      <div class="mt-3 grid gap-4 sm:grid-cols-2">
+        @for (side of incidentSides(); track side.teamId) {
+          <div>
+            <p class="font-display text-sm font-bold uppercase">{{ side.club }}</p>
+            <ul class="mt-1 space-y-1">
+              @for (x of side.incidents; track x.player) {
+                <li class="flex items-center gap-2 bg-pitch px-2 py-1.5 text-sm">
+                  <span class="tag" [class]="x.kind === 'redCard' ? 'bg-flare text-ink' : 'bg-gold text-ink'">
+                    {{ x.kind === 'redCard' ? 'Roja' : 'Lesión' }}
+                  </span>
+                  <span class="flex-1 truncate">{{ x.player }}</span>
+                  <button type="button" class="px-1 text-mist hover:text-flare" [attr.aria-label]="'Quitar ' + x.player" (click)="removeIncident(x)">✕</button>
+                </li>
+              }
+            </ul>
+            <div class="mt-1.5 flex gap-1.5">
+              <input
+                #playerInput
+                class="field min-w-0 flex-1 py-1.5 text-sm"
+                [attr.list]="'squad-' + side.teamId"
+                [placeholder]="side.squad ? 'Busca un jugador' : 'Nombre del jugador'"
+                [attr.aria-label]="'Jugador de ' + side.club"
+              />
+              <button type="button" class="tag bg-flare px-2 text-ink" (click)="addIncident(side.teamId, playerInput, 'redCard')">+ Roja</button>
+              <button type="button" class="tag bg-gold px-2 text-ink" (click)="addIncident(side.teamId, playerInput, 'injury')">+ Lesión</button>
+            </div>
+            @if (side.squad) {
+              <datalist [id]="'squad-' + side.teamId">
+                @for (p of side.squad.players; track p.name) {
+                  <option [value]="p.name">{{ p.position }} · {{ p.overall }}</option>
+                }
+              </datalist>
+            } @else {
+              <p class="mt-1 text-xs text-mist">No tenemos la plantilla de este club: escribe el nombre a mano.</p>
             }
-          </ul>
+          </div>
         }
       </div>
     </details>
@@ -102,6 +114,7 @@ import { lineup, recordResult } from '../../domain/tournament';
 })
 export class ResultForm implements OnInit {
   protected readonly session = inject(TournamentSession);
+  private readonly squads = inject(ClubSquads);
 
   readonly match = input.required<Match>();
   readonly saved = output<void>();
@@ -129,6 +142,7 @@ export class ResultForm implements OnInit {
   });
 
   ngOnInit(): void {
+    void this.squads.load();
     const m = this.match();
     if (m.status === 'done') {
       this.home.set(m.homeGoals ?? 0);
@@ -137,21 +151,39 @@ export class ResultForm implements OnInit {
       this.homePens.set(m.homePens ?? 0);
       this.awayPens.set(m.awayPens ?? 0);
       this.goals.set(m.goals ?? []);
-      this.incidents.set(m.incidents ?? []);
+      this.incidents.set((m.incidents ?? []).filter((x) => typeof x.player === "string"));
     }
   }
 
-  protected incident(participantId: Id): Incident['kind'] | null {
-    return this.incidents().find((x) => x.participantId === participantId)?.kind ?? null;
+  /** Each club in the match with its incidents and, when we know it, its real squad. */
+  protected readonly incidentSides = computed(() => {
+    const m = this.match();
+    return [m.homeId, m.awayId].map((teamId) => {
+      const club = this.session.teamName(teamId);
+      return {
+        teamId,
+        club,
+        squad: this.squads.squadFor(club),
+        incidents: this.incidents().filter((x) => x.teamId === teamId),
+      };
+    });
+  });
+
+  protected addIncident(teamId: Id, input: HTMLInputElement, kind: Incident["kind"]): void {
+    const player = input.value.trim();
+    if (!player) {
+      input.focus();
+      return;
+    }
+    this.incidents.update((list) => [
+      ...list.filter((x) => !(x.teamId === teamId && x.player === player)),
+      { teamId, player, kind },
+    ]);
+    input.value = "";
   }
 
-  /** One incident per player: tapping the active one clears it, the other one replaces it. */
-  protected toggleIncident(participantId: Id, kind: Incident['kind']): void {
-    const current = this.incident(participantId);
-    this.incidents.update((list) => {
-      const rest = list.filter((x) => x.participantId !== participantId);
-      return current === kind ? rest : [...rest, { participantId, kind }];
-    });
+  protected removeIncident(incident: Incident): void {
+    this.incidents.update((list) => list.filter((x) => x !== incident));
   }
 
   protected assigned(teamId: Id): number {

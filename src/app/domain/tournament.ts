@@ -202,14 +202,8 @@ export function isSolo(t: Tournament, teamId: Id): boolean {
   return activeMembers(t, teamId).length === 1;
 }
 
-/** Who plays for a team in a given match, leaving out anyone suspended for it. */
+/** Who plays for a team in a given match: active members plus the knockout partner or stand-in. */
 export function lineup(t: Tournament, m: Match, teamId: Id): Id[] {
-  const suspended = new Set(suspendedFor(t, m));
-  return fullLineup(t, m, teamId).filter((id) => !suspended.has(id));
-}
-
-/** Active members plus the knockout partner or the stand-in, ignoring suspensions. */
-function fullLineup(t: Tournament, m: Match, teamId: Id): Id[] {
   const members = activeMembers(t, teamId);
   const partner = team(t, teamId).knockoutPartnerId;
   const standIn = m.standIns?.[teamId];
@@ -220,32 +214,21 @@ function fullLineup(t: Tournament, m: Match, teamId: Id): Id[] {
 
 const isLateKnockout = (m: Match) => m.phase === 'semi' || m.phase === 'third' || m.phase === 'final';
 
-/** Players who play for this team as members or as its fixed knockout partner (not stand-ins). */
-function regulars(t: Tournament, m: Match, teamId: Id): Id[] {
-  const partner = team(t, teamId).knockoutPartnerId;
-  const members = activeMembers(t, teamId);
-  return partner && isLateKnockout(m) && members.length === 1 ? [...members, partner] : members;
-}
-
 /**
- * Players who cannot play this match: anyone with a red card or an injury in a previous match
- * misses the next match of their own team. The final is exempt.
+ * Footballers each club can't pick in this match: those sent off or injured in that club's
+ * previous match. The final is exempt.
  */
-export function suspendedFor(t: Tournament, m: Match): Id[] {
+export function unavailableFor(t: Tournament, m: Match): Incident[] {
   if (m.phase === 'final') return [];
   const index = t.matches.findIndex((x) => x.id === m.id);
-  const result: Id[] = [];
-  for (const id of [...regulars(t, m, m.homeId), ...regulars(t, m, m.awayId)]) {
-    // The most recent earlier match this player played for their own team.
+  const result: Incident[] = [];
+  for (const teamId of [m.homeId, m.awayId]) {
     for (let i = index - 1; i >= 0; i--) {
       const prev = t.matches[i];
-      const plays = [prev.homeId, prev.awayId].some((teamId) => regulars(t, prev, teamId).includes(id));
-      const hadIncident = prev.incidents?.some((x) => x.participantId === id);
-      if (hadIncident) {
-        result.push(id);
-        break;
-      }
-      if (plays) break;
+      if (prev.homeId !== teamId && prev.awayId !== teamId) continue;
+      // Ignores incidents saved in an older format (by person rather than footballer).
+      result.push(...(prev.incidents ?? []).filter((x) => x.teamId === teamId && typeof x.player === 'string'));
+      break;
     }
   }
   return result;
@@ -253,7 +236,7 @@ export function suspendedFor(t: Tournament, m: Match): Id[] {
 
 /** Whether a participant plays in a match: as a member, fixed knockout partner or stand-in. */
 export function playsIn(t: Tournament, m: Match, participantId: Id): boolean {
-  return [m.homeId, m.awayId].some((teamId) => fullLineup(t, m, teamId).includes(participantId));
+  return [m.homeId, m.awayId].some((teamId) => lineup(t, m, teamId).includes(participantId));
 }
 
 export type MyTurn =
@@ -338,10 +321,9 @@ function needsStandIn(t: Tournament, m: Match, teamId: Id): boolean {
  */
 function drawStandIn(t: Tournament, m: Match, teamId: Id, rng: Rng): Id {
   const busy = new Set([
-    ...fullLineup(t, m, m.homeId),
-    ...fullLineup(t, m, m.awayId),
+    ...lineup(t, m, m.homeId),
+    ...lineup(t, m, m.awayId),
     ...Object.values(m.standIns ?? {}),
-    ...suspendedFor(t, m),
   ]);
   const candidates = t.participants.filter((p) => !p.disqualified && !busy.has(p.id));
   if (candidates.length === 0) throw new TournamentError('No hay nadie libre para hacer pareja.');
@@ -416,11 +398,11 @@ function validateResult(t: Tournament, m: Match, r: MatchResult): void {
       }
     }
   }
-  if (r.incidents?.length) {
-    const playing = new Set([...lineup(t, m, m.homeId), ...lineup(t, m, m.awayId)]);
-    if (!r.incidents.every((x) => playing.has(x.participantId))) {
-      throw new TournamentError('Solo se pueden sancionar jugadores de este partido.');
+  for (const incident of r.incidents ?? []) {
+    if (incident.teamId !== m.homeId && incident.teamId !== m.awayId) {
+      throw new TournamentError('La sanción tiene que ser de uno de los dos equipos del partido.');
     }
+    if (!incident.player?.trim()) throw new TournamentError('Falta el nombre del jugador sancionado.');
   }
 }
 

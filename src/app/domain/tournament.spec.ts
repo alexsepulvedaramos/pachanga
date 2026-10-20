@@ -10,7 +10,7 @@ import {
   myTurn,
   playsIn,
   nextToSpin,
-  suspendedFor,
+  unavailableFor,
   createTournament,
   currentDecision,
   DEFAULT_CONFIG,
@@ -262,42 +262,51 @@ describe('full tournament', () => {
     }
   });
 
-  it('suspends a sent-off or injured player for their team’s next match, but not the final', () => {
+  it('rules a sent-off or injured footballer out of their club’s next match, but not the final', () => {
     const rng = seededRng(8);
     let t = drawAll(newTournament(12), rng);
     const first = nextMatch(t)!;
-    const offender = t.teams.find((x) => x.id === first.homeId)!.memberIds[0];
+    const club = first.homeId;
     t = recordResult(t, first.id, {
       homeGoals: 1,
       awayGoals: 0,
-      incidents: [{ participantId: offender, kind: 'redCard' }],
+      incidents: [{ teamId: club, player: 'Mohamed Salah', kind: 'redCard' }],
     });
 
-    const teamMatches = t.matches.filter((m) => [m.homeId, m.awayId].includes(first.homeId));
-    const [, next, afterNext] = teamMatches;
-    expect(suspendedFor(t, next)).toEqual([offender]);
-    expect(lineup(t, next, first.homeId)).toEqual(
-      t.teams.find((x) => x.id === first.homeId)!.memberIds.filter((id) => id !== offender),
-    );
-    // Other matches before the team plays again are unaffected, and so is the one after.
-    for (const m of t.matches.slice(1, t.matches.indexOf(next))) expect(suspendedFor(t, m)).toEqual([]);
-    expect(suspendedFor(t, afterNext)).toEqual([]);
+    const clubMatches = t.matches.filter((m) => [m.homeId, m.awayId].includes(club));
+    const [, next, afterNext] = clubMatches;
+    expect(unavailableFor(t, next)).toEqual([{ teamId: club, player: 'Mohamed Salah', kind: 'redCard' }]);
+    // The people holding the controllers are not affected.
+    expect(lineup(t, next, club)).toHaveLength(2);
+    // Matches before the club plays again are unaffected, and so is the one after.
+    for (const m of t.matches.slice(1, t.matches.indexOf(next))) {
+      expect(unavailableFor(t, m).filter((x) => x.teamId === club)).toEqual([]);
+    }
+    expect(unavailableFor(t, afterNext)).toEqual([]);
   });
 
-  it('never suspends anyone for the final', () => {
+  it('never rules anyone out of the final', () => {
     const rng = seededRng(3);
     let t = playThrough(drawAll(newTournament(12), rng), rng);
     const final = t.matches.find((m) => m.phase === 'final')!;
-    const finalist = lineup(t, final, final.homeId)[0];
-    // Pretend the finalist was sent off in the semi-final.
     const semi = t.matches.find((m) => m.phase === 'semi' && [m.homeId, m.awayId].includes(final.homeId))!;
     t = {
       ...t,
       matches: t.matches.map((m) =>
-        m.id === semi.id ? { ...m, incidents: [{ participantId: finalist, kind: 'injury' }] } : m,
+        m.id === semi.id ? { ...m, incidents: [{ teamId: final.homeId, player: 'Vini Jr.', kind: 'injury' }] } : m,
       ),
     };
-    expect(suspendedFor(t, final)).toEqual([]);
+    expect(unavailableFor(t, final)).toEqual([]);
+  });
+
+  it('rejects incidents for clubs that are not in the match', () => {
+    const rng = seededRng(2);
+    const t = drawAll(newTournament(12), rng);
+    const m = nextMatch(t)!;
+    const other = t.teams.find((x) => x.id !== m.homeId && x.id !== m.awayId)!.id;
+    expect(() =>
+      recordResult(t, m.id, { homeGoals: 0, awayGoals: 0, incidents: [{ teamId: other, player: 'X', kind: 'injury' }] }),
+    ).toThrow(TournamentError);
   });
 
   it('assigns pairs by hand as an alternative to the wheel', () => {

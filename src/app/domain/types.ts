@@ -25,9 +25,14 @@ export interface Goal {
   scorerId: Id | null;
 }
 
-/** A red card or an injury: the player misses their team's next match (except the final). */
+/**
+ * A red card or an injury to a footballer in the game (Salah, Vinícius…), not to a person
+ * holding a controller: that footballer can't be picked in their club's next match (except the
+ * final).
+ */
 export interface Incident {
-  participantId: Id;
+  teamId: Id;
+  player: string;
   kind: 'redCard' | 'injury';
 }
 

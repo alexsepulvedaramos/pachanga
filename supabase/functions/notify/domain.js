@@ -85,10 +85,6 @@ function activeMembers(t, teamId) {
   return team(t, teamId).memberIds.filter((id) => !participant(t, id).disqualified);
 }
 function lineup(t, m, teamId) {
-  const suspended = new Set(suspendedFor(t, m));
-  return fullLineup(t, m, teamId).filter((id) => !suspended.has(id));
-}
-function fullLineup(t, m, teamId) {
   const members = activeMembers(t, teamId);
   const partner = team(t, teamId).knockoutPartnerId;
   const standIn = m.standIns?.[teamId];
@@ -97,25 +93,16 @@ function fullLineup(t, m, teamId) {
   return members;
 }
 var isLateKnockout = (m) => m.phase === "semi" || m.phase === "third" || m.phase === "final";
-function regulars(t, m, teamId) {
-  const partner = team(t, teamId).knockoutPartnerId;
-  const members = activeMembers(t, teamId);
-  return partner && isLateKnockout(m) && members.length === 1 ? [...members, partner] : members;
-}
-function suspendedFor(t, m) {
+function unavailableFor(t, m) {
   if (m.phase === "final") return [];
   const index = t.matches.findIndex((x) => x.id === m.id);
   const result = [];
-  for (const id of [...regulars(t, m, m.homeId), ...regulars(t, m, m.awayId)]) {
+  for (const teamId of [m.homeId, m.awayId]) {
     for (let i = index - 1; i >= 0; i--) {
       const prev = t.matches[i];
-      const plays = [prev.homeId, prev.awayId].some((teamId) => regulars(t, prev, teamId).includes(id));
-      const hadIncident = prev.incidents?.some((x) => x.participantId === id);
-      if (hadIncident) {
-        result.push(id);
-        break;
-      }
-      if (plays) break;
+      if (prev.homeId !== teamId && prev.awayId !== teamId) continue;
+      result.push(...(prev.incidents ?? []).filter((x) => x.teamId === teamId && typeof x.player === "string"));
+      break;
     }
   }
   return result;
@@ -159,15 +146,18 @@ function buildMessages(t) {
   const now = pending.find((m) => m.status === "live") ?? pending[0];
   if (now) {
     const players = [...lineup(t, now, now.homeId), ...lineup(t, now, now.awayId)];
+    const out = unavailableFor(t, now);
     for (const id of players) {
       const team2 = [now.homeId, now.awayId].find((teamId) => lineup(t, now, teamId).includes(id));
       const guest = !t.teams.find((x) => x.id === team2).memberIds.includes(id);
       const partner = lineup(t, now, team2).find((x) => x !== id);
+      const missing = out.filter((x) => x.teamId === team2).map((x) => `${x.player} (${x.kind === "redCard" ? "roja" : "lesi\xF3n"})`);
+      const warning = missing.length ? ` Sin ${missing.join(", ")}.` : "";
       messages.push({
         key: `turn:${now.id}`,
         participantIds: [id],
         title: "\xA1Te toca!",
-        body: guest ? `Juegas de invitado con ${partner ? name(t, partner) : club(t, team2)}: ${fixture(t, now)}` : `${fixture(t, now)}. Coge el mando.`
+        body: guest ? `Juegas de invitado con ${partner ? name(t, partner) : club(t, team2)}: ${fixture(t, now)}.${warning}` : `${fixture(t, now)}. Coge el mando.${warning}`
       });
     }
     const next = pending.find((m) => m.id !== now.id);

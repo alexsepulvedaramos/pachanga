@@ -22,8 +22,8 @@ their own phones or on the TV.
 - **Solo player support.** Before each of their matches the solo player gets a partner drawn from
   whoever isn't playing; for the knockout stage they draw a fixed partner from eliminated players.
   Injuries mid-tournament turn the partner into a solo player automatically.
-- **Red cards and injuries.** A player marked in a result misses their team's next match (the
-  final is exempt); the next match shows who is out.
+- **Red cards and injuries** of in-game footballers, picked from the club's real squad: they are
+  shown as unavailable in that club's next match (the final is exempt) and in the push notification.
 - **Balanced club picker.** Pick a target rating and get clubs from the big five leagues as close
   to it as possible, or browse them: each club shows its estimated rating, attack/midfield/defence,
   stars and best starting XI on a pitch. Ratings are labelled with the game edition they belong to.

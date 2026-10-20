@@ -52,6 +52,23 @@ describe('push messages', () => {
     expect(message.body).toContain('invitado');
   });
 
+  it('warns which footballers the club cannot pick', () => {
+    let t = groupsReady(12);
+    const first = nextMatch(t)!;
+    t = recordResult(t, first.id, {
+      homeGoals: 0,
+      awayGoals: 0,
+      incidents: [{ teamId: first.homeId, player: 'Mohamed Salah', kind: 'redCard' }],
+    });
+    while (![nextMatch(t)!.homeId, nextMatch(t)!.awayId].includes(first.homeId)) {
+      t = recordResult(t, nextMatch(t)!.id, { homeGoals: 1, awayGoals: 0 });
+    }
+    const m = nextMatch(t)!;
+    const player = lineup(t, m, first.homeId)[0];
+    const message = buildMessages(t).find((x) => x.key.startsWith('turn') && x.participantIds.includes(player))!;
+    expect(message.body).toContain('Sin Mohamed Salah (roja)');
+  });
+
   it('asks the team that has to choose', () => {
     let t = groupsReady(12);
     while (t.stage === 'groups') t = recordResult(t, nextMatch(t)!.id, { homeGoals: 1, awayGoals: 0 });
