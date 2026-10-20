@@ -17,3 +17,7 @@ jobs:
       - run: npm ci
       - run: npx ng test --watch=false
       - run: npm run build
+      - name: Notification bundle is up to date with the domain code
+        run: |
+          npm run build:notify
+          git diff --exit-code supabase/functions/notify/domain.js

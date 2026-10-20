@@ -66,6 +66,21 @@ export class SupabaseTournamentRepository extends TournamentRepository {
     return data === true;
   }
 
+  async subscribePush(id: string, participantId: string, sub: PushSubscriptionJSON): Promise<void> {
+    const { error } = await this.client.rpc('subscribe_push', {
+      p_tournament_id: id,
+      p_participant_id: participantId,
+      p_endpoint: sub.endpoint,
+      p_p256dh: sub.keys?.['p256dh'],
+      p_auth: sub.keys?.['auth'],
+    });
+    if (error) throw new Error('No se han podido activar los avisos. Inténtalo otra vez.');
+  }
+
+  async unsubscribePush(endpoint: string): Promise<void> {
+    await this.client.rpc('unsubscribe_push', { p_endpoint: endpoint });
+  }
+
   watch(
     id: string,
     onChange: (stored: StoredTournament) => void,

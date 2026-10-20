@@ -30,6 +30,10 @@ their own phones or on the TV.
 - **Optional goal scorers** and a top scorers table.
 - **Your matches.** Each phone can say who is holding it: that player's matches are highlighted and
   a panel says whether it's their turn, how many matches until theirs and roughly at what time.
+- **Push notifications.** Players can ask to be told when it's their turn, when they're up next,
+  when they have to pick an opponent and who won. A database trigger calls a Supabase Edge
+  Function on every change; it reuses the app's own domain code (bundled with esbuild) to work out
+  who to notify and records what it sent so nothing is repeated.
 - **TV mode** with the current match, standings and upcoming fixtures in big type.
 - **Installable** as a PWA (manifest, maskable icons, service worker), with an install banner that
   uses the browser prompt on Android/desktop and explains Add to Home Screen on iOS.

@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { TournamentSession } from '../data/tournament-session';
 import { ToastService } from './toast.service';
+import { PushNotifications } from '../data/push-notifications';
 import { myTurn, MyTurn } from '../domain/tournament';
 import { formatClock, formatDuration } from './format';
 
@@ -72,6 +73,30 @@ import { formatClock, formatDuration } from './format';
             Cambiar
           </button>
         </section>
+
+        @switch (pushState()) {
+          @case ('off') {
+            <button type="button" class="btn-secondary mt-2 w-full text-sm" [disabled]="pushBusy()" (click)="enablePush()">
+              🔔 Avisarme cuando me toque
+            </button>
+          }
+          @case ('on') {
+            <p class="mt-2 flex items-center justify-between gap-3 bg-pitch px-4 py-2 text-sm">
+              <span><span class="text-volt">●</span> Avisos activados en este móvil</span>
+              <button type="button" class="text-mist underline hover:text-chalk" [disabled]="pushBusy()" (click)="disablePush()">Desactivar</button>
+            </p>
+          }
+          @case ('needs-install') {
+            <p class="mt-2 bg-pitch px-4 py-2 text-xs text-mist">
+              Para recibir avisos en iPhone, instala la app: <span class="text-chalk">Compartir → Añadir a pantalla de inicio</span>, y ábrela desde ahí.
+            </p>
+          }
+          @case ('blocked') {
+            <p class="mt-2 bg-pitch px-4 py-2 text-xs text-mist">
+              Has bloqueado las notificaciones de esta web. Actívalas en los ajustes del navegador para recibir avisos.
+            </p>
+          }
+        }
       }
     }
   `,
@@ -79,6 +104,7 @@ import { formatClock, formatDuration } from './format';
 export class MyTurnPanel {
   protected readonly session = inject(TournamentSession);
   private readonly toast = inject(ToastService);
+  private readonly push = inject(PushNotifications);
   protected readonly choosing = signal(false);
 
   protected readonly turn = computed<MyTurn | null>(() => {
@@ -101,9 +127,55 @@ export class MyTurnPanel {
     });
   }
 
+  protected readonly pushBusy = signal(false);
+
+  /** What to offer about notifications for this device and person. */
+  protected readonly pushState = computed<'off' | 'on' | 'needs-install' | 'blocked' | null>(() => {
+    const t = this.session.tournament();
+    const me = this.session.me();
+    if (!t || !me) return null;
+    this.push.subscribedAs(); // re-evaluate when notifications are switched on or off
+    const availability = this.push.availability(t.id);
+    if (availability === 'unavailable') return null;
+    if (availability !== 'ready') return availability;
+    return this.push.isOn(t.id, me) ? 'on' : 'off';
+  });
+
+  protected async enablePush(): Promise<void> {
+    const t = this.session.tournament();
+    const me = this.session.me();
+    if (!t || !me) return;
+    this.pushBusy.set(true);
+    try {
+      await this.push.enable(t.id, me);
+      this.toast.info('Listo: te avisaremos cuando te toque.');
+    } catch (error) {
+      this.toast.error(
+        Notification.permission === 'denied'
+          ? 'Has bloqueado las notificaciones. Actívalas en los ajustes del navegador.'
+          : error,
+      );
+    } finally {
+      this.pushBusy.set(false);
+    }
+  }
+
+  protected async disablePush(): Promise<void> {
+    const t = this.session.tournament();
+    if (!t) return;
+    this.pushBusy.set(true);
+    try {
+      await this.push.disable(t.id);
+    } finally {
+      this.pushBusy.set(false);
+    }
+  }
+
   protected choose(participantId: string): void {
     this.session.setMe(participantId);
     this.choosing.set(false);
+    const t = this.session.tournament();
+    if (t) void this.push.follow(t.id, participantId).catch((e) => this.toast.error(e));
   }
 
   protected duration(minutes: number): string {

@@ -7,7 +7,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "update:clubs": "node --no-warnings scripts/update-club-ratings.ts"
+    "update:clubs": "node --no-warnings scripts/update-club-ratings.ts",
+    "build:notify": "esbuild supabase/functions/notify/messages.ts --bundle --format=esm --platform=neutral --outfile=supabase/functions/notify/domain.js"
   },
   "private": true,
   "packageManager": "npm@11.11.0",
@@ -30,9 +31,11 @@
     "@angular/build": "^22.2.3",
     "@angular/cli": "^22.2.3",
     "@angular/compiler-cli": "^22.2.0",
+    "esbuild": "^0.28.2",
     "jsdom": "^30.0.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.0",
+    "web-push": "^3.6.7"
   }
 }

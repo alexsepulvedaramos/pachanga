@@ -53,6 +53,14 @@ export class LocalTournamentRepository extends TournamentRepository {
     return () => window.removeEventListener('storage', listener);
   }
 
+  async subscribePush(): Promise<void> {
+    throw new Error('Los avisos solo funcionan en torneos online, no en la demo.');
+  }
+
+  async unsubscribePush(): Promise<void> {
+    /* nothing was registered */
+  }
+
   private read(id: string): LocalRecord | null {
     try {
       const raw = localStorage.getItem(key(id));

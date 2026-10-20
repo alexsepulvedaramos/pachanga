@@ -47,6 +47,10 @@ export abstract class TournamentRepository {
     onChange: (stored: StoredTournament) => void,
     onReconnect?: () => void,
   ): () => void;
+
+  /** Registers this device for push notifications addressed to one participant. */
+  abstract subscribePush(id: string, participantId: string, subscription: PushSubscriptionJSON): Promise<void>;
+  abstract unsubscribePush(endpoint: string): Promise<void>;
 }
 
 export async function hashPin(id: string, pin: string): Promise<string> {
