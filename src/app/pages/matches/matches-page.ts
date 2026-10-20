@@ -17,6 +17,7 @@ import {
   redrawStandIn,
   reopenMatch,
   startMatch,
+  halfMinutesOf,
   totalMatchCount,
 } from '../../domain/tournament';
 import { formatClock, formatDuration } from '../../ui/format';
@@ -175,7 +176,7 @@ export class MatchesPage {
     const t = this.session.tournament();
     if (!t) return null;
     const m = t.matches.find((x) => x.status === 'live') ?? nextMatch(t);
-    return m ? { ...m, halfMinutes: t.config.halfMinutes[m.phase] } : null;
+    return m ? { ...m, halfMinutes: halfMinutesOf(t, m.phase) } : null;
   });
 
   protected readonly doneCount = computed(
@@ -197,7 +198,7 @@ export class MatchesPage {
   protected readonly fixture = computed(() => {
     const t = this.session.tournament();
     if (!t) return [];
-    const order: Phase[] = ['group', 'playoff', 'semi', 'third', 'final'];
+    const order: Phase[] = ['group', 'playoff', 'quarter', 'semi', 'third', 'final'];
     let number = 0;
     const me = this.session.me();
     const numbered = t.matches.map((match) => ({
@@ -230,7 +231,9 @@ export class MatchesPage {
 
   protected phaseLabel(m: Match): string {
     if (m.phase === 'group') return `Liguilla · Jornada ${m.round}`;
-    if (m.phase === 'playoff' || m.phase === 'semi') return `${PHASE_LABELS[m.phase]} ${m.id.slice(-1)}`;
+    const t = this.session.tournament();
+    const several = (t?.matches.filter((x) => x.phase === m.phase).length ?? 0) > 1;
+    if (m.phase !== 'third' && m.phase !== 'final' && several) return `${PHASE_LABELS[m.phase]} ${m.id.slice(-1)}`;
     return PHASE_LABELS[m.phase];
   }
 

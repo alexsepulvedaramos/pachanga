@@ -15,7 +15,7 @@ export interface Team {
   knockoutPartnerId?: Id;
 }
 
-export type Phase = 'group' | 'playoff' | 'semi' | 'third' | 'final';
+export type Phase = 'group' | 'playoff' | 'quarter' | 'semi' | 'third' | 'final';
 
 export type MatchStatus = 'pending' | 'live' | 'done';
 
@@ -68,6 +68,8 @@ export type TiebreakCriterion =
 export interface HalfMinutes {
   group: number;
   playoff: number;
+  /** Missing in tournaments created before quarter-finals existed. */
+  quarter?: number;
   semi: number;
   third: number;
   final: number;

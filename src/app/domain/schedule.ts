@@ -6,19 +6,27 @@ type Pair = readonly [Id, Id];
 const SEARCH_BUDGET = 50_000;
 
 /**
- * Single round-robin for a group played on one console: every team meets every other team once,
- * in an order where (whenever the team count allows it) nobody plays two matches in a row and the
- * number of matches played stays balanced between teams.
+ * Round-robin for a group played on one console: every team meets every other team once (or twice,
+ * home and away, with `legs` 2), in an order where (whenever the team count allows it) nobody plays
+ * two matches in a row and the number of matches played stays balanced between teams.
  */
-export function buildGroupSchedule(teamIds: readonly Id[], rng: Rng): Match[] {
+export function buildGroupSchedule(teamIds: readonly Id[], rng: Rng, legs: 1 | 2 = 1): Match[] {
   if (teamIds.length < 2) return [];
   const pairs = allPairs(shuffle(teamIds, rng));
-  const order = findOrder(teamIds, pairs, rng, true) ?? findOrder(teamIds, pairs, rng, false)!;
+  const firstLeg = findOrder(teamIds, pairs, rng, true) ?? findOrder(teamIds, pairs, rng, false)!;
+  const order = legs === 2 ? [...firstLeg, ...returnLeg(firstLeg)] : firstLeg;
   const perRound = Math.max(1, Math.floor(teamIds.length / 2));
   const homeCount = new Map<Id, number>(teamIds.map((id) => [id, 0]));
+  /** Home team of the first meeting of each pair, so the return match swaps it. */
+  const firstHome = new Map<string, Id>();
 
   return order.map(([a, b], index) => {
-    const [homeId, awayId] = (homeCount.get(a)! <= homeCount.get(b)!) ? [a, b] : [b, a];
+    const key = [a, b].sort().join('|');
+    const previous = firstHome.get(key);
+    const [homeId, awayId] = previous
+      ? previous === a ? [b, a] : [a, b]
+      : homeCount.get(a)! <= homeCount.get(b)! ? [a, b] : [b, a];
+    if (!previous) firstHome.set(key, homeId);
     homeCount.set(homeId, homeCount.get(homeId)! + 1);
     return {
       id: `g${index + 1}`,
@@ -31,6 +39,19 @@ export function buildGroupSchedule(teamIds: readonly Id[], rng: Rng): Match[] {
       awayGoals: null,
     } satisfies Match;
   });
+}
+
+/**
+ * The return matches in the same order as the first leg, starting wherever gives the fewest
+ * back-to-back matches across both legs.
+ */
+function returnLeg(firstLeg: readonly Pair[]): Pair[] {
+  const rotations = firstLeg.map((_, i) => [...firstLeg.slice(i), ...firstLeg.slice(0, i)]);
+  const backToBacks = (order: readonly Pair[]) =>
+    order.slice(1).filter((pair, i) => sharesTeam(pair, order[i])).length;
+  return rotations.reduce((best, rotation) =>
+    backToBacks([...firstLeg, ...rotation]) < backToBacks([...firstLeg, ...best]) ? rotation : best,
+  );
 }
 
 function allPairs(ids: readonly Id[]): Pair[] {

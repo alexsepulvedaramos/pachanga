@@ -84,8 +84,12 @@ const ZONE_STYLES: Record<Zone, string> = {
     </div>
     @if (!big()) {
       <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-mist">
-        <li class="flex items-center gap-1.5"><span class="size-2.5 bg-volt"></span>Directo a semis</li>
-        <li class="flex items-center gap-1.5"><span class="size-2.5 bg-cyan"></span>Repesca</li>
+        @if (format(); as f) {
+          @if (f.direct > 0) {
+            <li class="flex items-center gap-1.5"><span class="size-2.5 bg-volt"></span>{{ f.directLabel }}</li>
+          }
+          <li class="flex items-center gap-1.5"><span class="size-2.5 bg-cyan"></span>{{ f.playoffLabel }}</li>
+        }
         @if (hasOut()) {
           <li class="flex items-center gap-1.5"><span class="size-2.5 bg-flare"></span>Eliminado</li>
         }
@@ -97,6 +101,11 @@ export class StandingsTable {
   private readonly session = inject(TournamentSession);
   readonly big = input(false);
   protected readonly zoneStyles = ZONE_STYLES;
+
+  protected readonly format = computed(() => {
+    const teams = this.session.tournament()?.teams.length ?? 0;
+    return teams ? knockoutFormat(teams) : null;
+  });
 
   protected readonly rows = computed(() => {
     const t = this.session.tournament();

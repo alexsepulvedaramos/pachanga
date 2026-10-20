@@ -4,13 +4,15 @@ import { Brand } from '../../ui/brand';
 import { TournamentStore } from '../../data/tournament-store';
 import { newTournamentCode } from '../../data/tournament-repository';
 import { ToastService } from '../../ui/toast.service';
-import { HalfMinutes, TiebreakCriterion } from '../../domain/types';
+import { HalfMinutes, Phase, TiebreakCriterion } from '../../domain/types';
 import { randomSeed } from '../../domain/rng';
 import { TIEBREAKER_LABELS } from '../../domain/standings';
-import { PHASE_LABELS } from '../../domain/knockout';
+import { formatSummary, knockoutPhases, PHASE_LABELS } from '../../domain/knockout';
 import {
+  allMatchPhases,
   createTournament,
   DEFAULT_CONFIG,
+  defaultHalfMinutes,
   MAX_PARTICIPANTS,
   MIN_PARTICIPANTS,
   teamCountFor,
@@ -90,6 +92,11 @@ const CLUB_SUGGESTIONS = [
           Entre {{ min }} y {{ max }}. Si sois impares, al que le toque solo se le sortea compañero
           en cada partido. Puedes pegar una lista entera.
         </p>
+        @if (validTeamCount()) {
+          <p class="cut-sm mt-3 border-l-4 border-volt bg-pitch px-4 py-2 text-sm">
+            <span class="eyebrow mr-2 text-volt">Formato</span>{{ summary() }}
+          </p>
+        }
       </section>
 
       <!-- Clubs -->
@@ -171,7 +178,7 @@ const CLUB_SUGGESTIONS = [
           />
         </label>
         <div class="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
-          @for (phase of phases; track phase) {
+          @for (phase of phases(); track phase) {
             <label class="block bg-pitch p-2">
               <span class="eyebrow block text-[0.65rem] text-mist">{{ phaseLabels[phase] }}</span>
               <input
@@ -244,26 +251,36 @@ export class SetupPage {
   protected readonly max = MAX_PARTICIPANTS;
   protected readonly labels = TIEBREAKER_LABELS;
   protected readonly phaseLabels = PHASE_LABELS;
-  protected readonly phases: (keyof HalfMinutes)[] = ['group', 'playoff', 'semi', 'third', 'final'];
 
   protected readonly name = signal('');
   protected readonly players = signal<string[]>([]);
   protected readonly clubs = signal<string[]>([]);
   protected readonly tiebreakers = signal<TiebreakCriterion[]>([...DEFAULT_CONFIG.tiebreakers]);
   protected readonly trackScorers = signal(false);
-  protected readonly minutes = signal<HalfMinutes>({ ...DEFAULT_CONFIG.halfMinutes });
+  /** Minutes per half changed by hand; the rest follow the defaults for the number of teams. */
+  private readonly minuteOverrides = signal<Partial<HalfMinutes>>({});
   protected readonly changeover = signal(DEFAULT_CONFIG.changeoverMinutes);
   protected readonly pin = signal('');
   protected readonly creating = signal(false);
   protected readonly picking = signal(false);
 
   protected readonly teamCount = computed(() => teamCountFor(this.players().length));
+  protected readonly minutes = computed<HalfMinutes>(() => ({
+    ...defaultHalfMinutes(this.teamCount()),
+    ...this.minuteOverrides(),
+  }));
+  /** Phases this tournament size will play, to set their minutes per half. */
+  protected readonly phases = computed<(keyof HalfMinutes)[]>(() => {
+    if (!this.validTeamCount()) return ['group', 'playoff', 'semi', 'third', 'final'];
+    return [...new Set<Phase>(['group', ...knockoutPhases(this.teamCount())])];
+  });
+  protected readonly summary = computed(() => formatSummary(this.teamCount()));
   protected readonly validTeamCount = computed(() => {
     const n = this.players().length;
     return n >= MIN_PARTICIPANTS && n <= MAX_PARTICIPANTS;
   });
   protected readonly clubSlots = computed(() =>
-    Array.from({ length: Math.max(this.teamCount(), 5) }, (_, i) => this.clubs()[i] ?? ''),
+    Array.from({ length: Math.max(this.teamCount(), 3) }, (_, i) => this.clubs()[i] ?? ''),
   );
   protected readonly suggestions = computed(() => {
     const used = new Set(this.clubs().map((c) => c.toLowerCase()));
@@ -276,13 +293,11 @@ export class SetupPage {
   );
   protected readonly matchCount = computed(() => totalMatchCount(this.teamCount()));
   protected readonly duration = computed(() => {
-    const teams = this.teamCount();
     const m = this.minutes();
-    const per = (half: number) => half * 2 + this.changeover();
-    const groups = (teams * (teams - 1)) / 2;
-    const playoffs = teams === 5 ? 1 : 2;
-    const total =
-      groups * per(m.group) + playoffs * per(m.playoff) + 2 * per(m.semi) + per(m.third) + per(m.final);
+    const total = allMatchPhases(this.teamCount()).reduce(
+      (sum, phase) => sum + (m[phase] ?? m.playoff) * 2 + this.changeover(),
+      0,
+    );
     return `~${formatDuration(total)}`;
   });
 
@@ -353,7 +368,7 @@ export class SetupPage {
 
   protected setMinutes(phase: keyof HalfMinutes, value: number): void {
     if (!Number.isFinite(value) || value < 1) return;
-    this.minutes.update((m) => ({ ...m, [phase]: value }));
+    this.minuteOverrides.update((m) => ({ ...m, [phase]: value }));
   }
 
   protected async create(): Promise<void> {

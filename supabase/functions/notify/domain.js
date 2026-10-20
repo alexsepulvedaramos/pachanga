@@ -1,13 +1,54 @@
 // src/app/domain/knockout.ts
-var MIN_TEAMS = 5;
-var MAX_TEAMS = 7;
+var MIN_TEAMS = 3;
+var MAX_TEAMS = 8;
+var REPECHAGE = {
+  legs: 1,
+  firstRound: "playoff",
+  choices: true,
+  thirdPlace: true,
+  directLabel: "Directo a semis",
+  playoffLabel: "Repesca"
+};
 function knockoutFormat(teamCount) {
   switch (teamCount) {
+    case 3:
+      return {
+        legs: 2,
+        direct: 1,
+        playoff: [2, 3],
+        firstRound: "semi",
+        choices: false,
+        thirdPlace: false,
+        directLabel: "Directo a la final",
+        playoffLabel: "Semifinal"
+      };
+    case 4:
+      return {
+        legs: 2,
+        direct: 0,
+        playoff: [1, 2, 3, 4],
+        firstRound: "semi",
+        choices: false,
+        thirdPlace: true,
+        directLabel: "",
+        playoffLabel: "Semifinales"
+      };
     case 5:
-      return { direct: 3, playoff: [4, 5] };
+      return { ...REPECHAGE, direct: 3, playoff: [4, 5] };
     case 6:
     case 7:
-      return { direct: 2, playoff: [3, 4, 5, 6] };
+      return { ...REPECHAGE, direct: 2, playoff: [3, 4, 5, 6] };
+    case 8:
+      return {
+        legs: 1,
+        direct: 0,
+        playoff: [1, 2, 3, 4, 5, 6, 7, 8],
+        firstRound: "quarter",
+        choices: false,
+        thirdPlace: true,
+        directLabel: "",
+        playoffLabel: "Cuartos"
+      };
     default:
       throw new Error(`Unsupported team count: ${teamCount}`);
   }
@@ -15,6 +56,7 @@ function knockoutFormat(teamCount) {
 var PHASE_LABELS = {
   group: "Liguilla",
   playoff: "Repesca",
+  quarter: "Cuartos",
   semi: "Semifinal",
   third: "3er puesto",
   final: "Final"
@@ -33,13 +75,17 @@ function byPhase(matches, phase) {
 }
 var allDone = (matches) => matches.length > 0 && matches.every((m) => winnerOf(m) !== null);
 function playoffTeams(ranking) {
-  return knockoutFormat(ranking.length).playoff.map((pos) => ranking[pos - 1]);
+  const format = knockoutFormat(ranking.length);
+  if (format.firstRound !== "playoff") return [];
+  return format.playoff.map((pos) => ranking[pos - 1]);
 }
 function semiFinalists(ranking, matches) {
-  const playoff = byPhase(matches, "playoff");
-  if (!allDone(playoff)) return null;
-  const winners = new Set(playoff.map((m) => winnerOf(m)));
-  const direct = ranking.slice(0, knockoutFormat(ranking.length).direct);
+  const format = knockoutFormat(ranking.length);
+  if (format.firstRound === "semi") return ranking.slice(0, format.direct + format.playoff.length);
+  const first = byPhase(matches, format.firstRound);
+  if (!allDone(first)) return null;
+  const winners = new Set(first.map((m) => winnerOf(m)));
+  const direct = ranking.slice(0, format.direct);
   return [...direct, ...ranking.filter((id) => winners.has(id))];
 }
 function pendingDecision(ranking, choices, matches) {
@@ -53,7 +99,7 @@ function pendingDecision(ranking, choices, matches) {
       return { kind: "playoffOrder", chooserId: orderChooser };
     }
   }
-  const semis = semiFinalists(ranking, matches);
+  const semis = knockoutFormat(ranking.length).choices ? semiFinalists(ranking, matches) : null;
   if (semis && byPhase(matches, "semi").length === 0) {
     const [chooser, orderChooser] = semis;
     if (!choices.semiOpponentId) {

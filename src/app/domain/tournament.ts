@@ -1,5 +1,6 @@
 import {
   Goal,
+  HalfMinutes,
   Id,
   Incident,
   KnockoutChoices,
@@ -13,8 +14,10 @@ import { Rng, pick, seededRng, shuffle } from './rng';
 import { buildGroupSchedule } from './schedule';
 import { computeStandings, DEFAULT_TIEBREAKERS, StandingRow } from './standings';
 import {
+  groupMatchCount,
   KnockoutDecision,
   knockoutFormat,
+  knockoutPhases,
   MAX_TEAMS,
   MIN_TEAMS,
   nextKnockoutMatches,
@@ -29,9 +32,14 @@ export const MAX_PARTICIPANTS = MAX_TEAMS * 2;
 export const DEFAULT_CONFIG: Omit<TournamentConfig, 'seed'> = {
   tiebreakers: DEFAULT_TIEBREAKERS,
   trackScorers: false,
-  halfMinutes: { group: 5, playoff: 5, semi: 6, third: 6, final: 7 },
+  halfMinutes: { group: 5, playoff: 5, quarter: 5, semi: 6, third: 6, final: 7 },
   changeoverMinutes: 3,
 };
+
+/** Default minutes per half: with 8 teams the longer group stage is played at 4-minute halves. */
+export function defaultHalfMinutes(teamCount: number): HalfMinutes {
+  return { ...DEFAULT_CONFIG.halfMinutes, group: teamCount >= 8 ? 4 : 5 };
+}
 
 export class TournamentError extends Error {}
 
@@ -168,6 +176,7 @@ export function finishDraw(t: Tournament, rng: Rng): Tournament {
   const matches = buildGroupSchedule(
     teams.map((team) => team.id),
     rng,
+    knockoutFormat(teams.length).legs,
   );
   return { ...t, stage: 'groups', teams, matches };
 }
@@ -270,12 +279,16 @@ function teamStillIn(t: Tournament, participantId: Id): boolean {
   const alive = (teamId: Id) => {
     const position = t.groupRanking!.indexOf(teamId) + 1;
     if (position > format.direct && !format.playoff.includes(position)) return false;
-    const involved = (phase: Match['phase']) =>
-      t.matches.filter((m) => m.phase === phase && [m.homeId, m.awayId].includes(teamId));
-    const lostPlayoff = involved('playoff').some((m) => winnerOf(m) && winnerOf(m) !== teamId);
-    // Semi-final losers still play for third place; the last match ends it either way.
-    const finished = [...involved('third'), ...involved('final')].some((m) => winnerOf(m));
-    return !lostPlayoff && !finished;
+    const involved = t.matches.filter((m) => m.phase !== 'group' && [m.homeId, m.awayId].includes(teamId));
+    const lost = (m: Match) => !!winnerOf(m) && winnerOf(m) !== teamId;
+    // Semi-final losers still play for third place, if there is one; the last match ends it either way.
+    const out = involved.some(
+      (m) =>
+        ((m.phase === 'playoff' || m.phase === 'quarter') && lost(m)) ||
+        (m.phase === 'semi' && lost(m) && !format.thirdPlace) ||
+        ((m.phase === 'third' || m.phase === 'final') && !!winnerOf(m)),
+    );
+    return !out;
   };
   return t.teams
     .filter((x) => x.memberIds.includes(participantId) || x.knockoutPartnerId === participantId)
@@ -415,6 +428,7 @@ function assertEditable(t: Tournament, m: Match): void {
   const later: Record<Match['phase'], Match['phase'][]> = {
     group: [],
     playoff: ['semi', 'third', 'final'],
+    quarter: ['semi', 'third', 'final'],
     semi: ['third', 'final'],
     third: [],
     final: [],
@@ -505,7 +519,8 @@ export function sync(t: Tournament): Tournament {
 
   const final = next.matches.find((m) => m.phase === 'final');
   const third = next.matches.find((m) => m.phase === 'third');
-  if (final && third && winnerOf(final) && winnerOf(third)) next = { ...next, stage: 'finished' };
+  const thirdDone = third ? !!winnerOf(third) : !knockoutFormat(next.teams.length).thirdPlace;
+  if (final && winnerOf(final) && thirdDone) next = { ...next, stage: 'finished' };
   return next;
 }
 
@@ -550,31 +565,36 @@ export function topScorers(t: Tournament): { participantId: Id; goals: number }[
     .sort((a, b) => b.goals - a.goals);
 }
 
+export function halfMinutesOf(t: Tournament, phase: Match['phase']): number {
+  const minutes = t.config.halfMinutes;
+  return phase === 'quarter' ? (minutes.quarter ?? minutes.playoff) : minutes[phase];
+}
+
 export function matchMinutes(t: Tournament, phase: Match['phase']): number {
-  return t.config.halfMinutes[phase] * 2 + t.config.changeoverMinutes;
+  return halfMinutesOf(t, phase) * 2 + t.config.changeoverMinutes;
+}
+
+/** Every match the tournament will have, group and knockout, by phase. */
+export function allMatchPhases(teamCount: number): Match['phase'][] {
+  return [...Array<Match['phase']>(groupMatchCount(teamCount)).fill('group'), ...knockoutPhases(teamCount)];
 }
 
 /** Matches still to be played, including knockout ones not created yet. */
 export function remainingMatchPhases(t: Tournament): Match['phase'][] {
   const pending = t.matches.filter((m) => m.status !== 'done').map((m) => m.phase);
-  if (t.stage === 'draw' || t.stage === 'setup') {
-    const teams = t.clubs.length;
-    pending.push(...Array<Match['phase']>((teams * (teams - 1)) / 2).fill('group'));
-  }
-  const created = new Set(t.matches.map((m) => m.phase));
-  if (t.stage !== 'finished') {
-    const playoffs = t.clubs.length === 5 ? 1 : 2;
-    if (!created.has('playoff')) pending.push(...Array<Match['phase']>(playoffs).fill('playoff'));
-    if (!created.has('semi')) pending.push('semi', 'semi');
-    if (!created.has('third')) pending.push('third');
-    if (!created.has('final')) pending.push('final');
+  if (t.stage === 'finished') return pending;
+  const created = new Map<Match['phase'], number>();
+  for (const m of t.matches) created.set(m.phase, (created.get(m.phase) ?? 0) + 1);
+  for (const phase of allMatchPhases(t.clubs.length)) {
+    const count = created.get(phase) ?? 0;
+    if (count > 0) created.set(phase, count - 1);
+    else pending.push(phase);
   }
   return pending;
 }
 
 export function totalMatchCount(teamCount: number): number {
-  const group = (teamCount * (teamCount - 1)) / 2;
-  return group + (teamCount === 5 ? 1 : 2) + 4;
+  return allMatchPhases(teamCount).length;
 }
 
 export function estimatedRemainingMinutes(t: Tournament): number {

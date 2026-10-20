@@ -3,7 +3,7 @@ import { TournamentSession } from '../../data/tournament-session';
 import { DecisionPanel } from '../../ui/decision-panel';
 import { clubColor } from '../../ui/club-colors';
 import { Id, Match, Phase } from '../../domain/types';
-import { knockoutFormat, winnerOf } from '../../domain/knockout';
+import { knockoutFormat, QUARTER_SEEDS, winnerOf } from '../../domain/knockout';
 
 interface Slot {
   label: string;
@@ -20,7 +20,7 @@ interface Slot {
       <h1 class="heading text-4xl">Cuadro</h1>
       <div class="mt-5"><app-decision-panel /></div>
 
-      <div class="mt-6 grid gap-6 md:grid-cols-3">
+      <div class="mt-6 grid gap-6" [class]="columns().length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'">
         @for (column of columns(); track column.title) {
           <section>
             <h2 class="eyebrow text-cyan">{{ column.title }}</h2>
@@ -73,6 +73,43 @@ export class BracketPage {
       rows: match ? this.rows(match) : null,
     });
 
+    const finals = (finalPlaceholder: string) => [
+      slot('Final', byPhase('final')[0], finalPlaceholder),
+      ...(format.thirdPlace ? [slot('3er puesto', byPhase('third')[0], 'Perdedores de semis')] : []),
+    ];
+
+    if (format.firstRound === 'quarter') {
+      const quarters = QUARTER_SEEDS.map(([a, b], i) =>
+        slot(`Cuartos ${i + 1}`, byPhase('quarter')[i], `${seedName(a)} vs ${seedName(b)}`),
+      );
+      const semis = [0, 1].map((i) =>
+        slot(`Semifinal ${i + 1}`, byPhase('semi')[i], `Ganadores de cuartos ${2 * i + 1} y ${2 * i + 2}`),
+      );
+      return [
+        { title: 'Cuartos', slots: quarters },
+        { title: 'Semifinales', slots: semis },
+        { title: 'Final', slots: finals('Ganadores de semis') },
+      ];
+    }
+
+    if (teams === 3) {
+      return [
+        { title: 'Semifinal', slots: [slot('Semifinal', byPhase('semi')[0], `${seedName(2)} vs ${seedName(3)}`)] },
+        { title: 'Final', slots: finals(`${seedName(1)} vs ganador de la semifinal`) },
+      ];
+    }
+
+    if (format.firstRound === 'semi') {
+      const pairs = [[1, 4], [2, 3]];
+      const semis = pairs.map(([a, b], i) =>
+        slot(`Semifinal ${i + 1}`, byPhase('semi')[i], `${seedName(a)} vs ${seedName(b)}`),
+      );
+      return [
+        { title: 'Semifinales', slots: semis },
+        { title: 'Final', slots: finals('Ganadores de semis') },
+      ];
+    }
+
     const playoffCount = format.playoff.length / 2;
     const playoffPlaceholder =
       playoffCount === 1
@@ -87,15 +124,10 @@ export class BracketPage {
       slot(`Semifinal ${i + 1}`, byPhase('semi')[i], i === 0 ? `${direct[0]} elige rival` : `${direct[1] ?? '—'} y el resto`),
     );
 
-    const finals = [
-      slot('Final', byPhase('final')[0], 'Ganadores de semis'),
-      slot('3er puesto', byPhase('third')[0], 'Perdedores de semis'),
-    ];
-
     return [
       { title: 'Repesca', slots: playoff },
       { title: 'Semifinales', slots: semis },
-      { title: 'Final', slots: finals },
+      { title: 'Final', slots: finals('Ganadores de semis') },
     ];
   });
 

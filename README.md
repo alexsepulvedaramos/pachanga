@@ -12,12 +12,21 @@ their own phones or on the TV.
 - **Pairs draw with a wheel.** Every club appears twice; the second time a club comes out, a pair
   is formed. With an odd number of players one club comes out once and its owner plays solo.
   Pairs can also be assigned by hand.
+- **6 to 16 players.** The format adapts to the number of pairs:
+
+  | Pairs | Players | Group stage | Knockout |
+  | --- | --- | --- | --- |
+  | 3 | 6 | Home and away | 1st straight to the final, 2nd vs 3rd for the other place |
+  | 4 | 7–8 | Home and away | Semis 1st–4th and 2nd–3rd, third place, final |
+  | 5 | 9–10 | Single round-robin | Top 3 to the semis, 4th vs 5th playoff |
+  | 6–7 | 11–14 | Single round-robin | Top 2 to the semis, 3rd–6th playoff |
+  | 8 | 15–16 | Single round-robin, 4-minute halves | Quarters 1–8, 4–5, 2–7, 3–6, semis, third place, final |
 - **Group stage on a single console.** Round-robin ordered so no team plays two matches in a row
-  and everybody stays within one match of each other.
+  (whenever the number of teams allows it) and everybody stays within one match of each other.
 - **Live standings** with tiebreakers chosen and ordered when the tournament is set up
   (goal difference, goals for, head-to-head, wins, drawing of lots…).
-- **Playoff and bracket as the house rules want them.** Top two go straight to the semis, 3rd–6th
-  play a playoff where the 3rd picks their opponent and the 4th picks the order; the group winner
+- **Playoff and bracket as the house rules want them.** With 5–7 pairs, top two go straight to
+  the semis, 3rd–6th play a playoff where the 3rd picks their opponent and the 4th picks the order; the group winner
   picks their semi-final opponent. Extra time and penalties in knockout matches.
 - **Solo player support.** Before each of their matches the solo player gets a partner drawn from
   whoever isn't playing; for the knockout stage they draw a fixed partner from eliminated players.

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { seededRng, Rng } from './rng';
 import { backToBackCount, buildGroupSchedule } from './schedule';
 import { computeStandings } from './standings';
-import { nextKnockoutMatches, pendingDecision, winnerOf } from './knockout';
+import { knockoutFormat, nextKnockoutMatches, pendingDecision, podium, winnerOf } from './knockout';
 import { Match, Tournament } from './types';
 import {
   assignClub,
@@ -14,6 +14,8 @@ import {
   createTournament,
   currentDecision,
   DEFAULT_CONFIG,
+  defaultHalfMinutes,
+  groupMatches,
   disqualify,
   estimatedRemainingMinutes,
   finishDraw,
@@ -30,7 +32,7 @@ import {
   wheelEntries,
 } from './tournament';
 
-const CLUBS = ['Real Madrid', 'Man City', 'Bayern', 'PSG', 'Inter', 'Liverpool', 'Barça'];
+const CLUBS = ['Real Madrid', 'Man City', 'Bayern', 'PSG', 'Inter', 'Liverpool', 'Barça', 'Arsenal'];
 
 function newTournament(players: number, seed = 1): Tournament {
   return createTournament({
@@ -178,7 +180,7 @@ describe('knockout', () => {
 });
 
 describe('full tournament', () => {
-  for (const players of [10, 11, 12, 13, 14]) {
+  for (const players of [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]) {
     it(`runs from the draw to the champion with ${players} players`, () => {
       for (let seed = 1; seed <= 10; seed++) {
         const rng = seededRng(seed);
@@ -366,8 +368,90 @@ describe('full tournament', () => {
     expect(myTurn(t, winner).kind).toBe('waiting');
   });
 
-  it('rejects participant counts outside the supported range', () => {
-    expect(() => newTournament(9)).toThrow(TournamentError);
-    expect(() => newTournament(15)).toThrow(TournamentError);
+});
+
+describe('tournament sizes', () => {
+  const finishGroups = (t: Tournament, rng: Rng) => {
+    let next = t;
+    while (next.stage === 'groups') {
+      const m = nextMatch(next)!;
+      next = recordResult(next, m.id, randomResult(m, rng));
+    }
+    return next;
+  };
+  const pairOf = (m: Match) => [m.homeId, m.awayId];
+
+  it('plays a double round-robin with 3 teams, home and away, then 2nd vs 3rd for the final', () => {
+    const rng = seededRng(3);
+    let t = drawAll(newTournament(6), rng);
+    const groups = groupMatches(t);
+    expect(groups).toHaveLength(6);
+    for (const m of groups) {
+      const back = groups.find((x) => x.homeId === m.awayId && x.awayId === m.homeId);
+      expect(back).toBeDefined();
+    }
+
+    t = finishGroups(t, rng);
+    const [first, second, third] = t.groupRanking!;
+    expect(t.matches.filter((m) => m.phase === 'semi').map(pairOf)).toEqual([[second, third]]);
+    expect(currentDecision(t)).toBeNull();
+
+    t = playThrough(t, rng);
+    expect(t.stage).toBe('finished');
+    expect(t.matches.some((m) => m.phase === 'third')).toBe(false);
+    expect(t.matches.find((m) => m.phase === 'final')!.homeId).toBe(first);
+    expect(podium(t.matches)).toHaveLength(3);
+    expect(t.matches).toHaveLength(8);
+  });
+
+  it('plays fixed semi-finals 1st vs 4th and 2nd vs 3rd with 4 teams', () => {
+    const rng = seededRng(4);
+    let t = finishGroups(drawAll(newTournament(8), rng), rng);
+    expect(groupMatches(t)).toHaveLength(12);
+    const [a, b, c, d] = t.groupRanking!;
+    expect(t.matches.filter((m) => m.phase === 'semi').map(pairOf)).toEqual([[a, d], [b, c]]);
+    expect(currentDecision(t)).toBeNull();
+    t = playThrough(t, rng);
+    expect(t.matches).toHaveLength(16);
+  });
+
+  it('plays quarter-finals 1–8, 4–5, 2–7, 3–6 with 8 teams and seeds the semis from them', () => {
+    const rng = seededRng(5);
+    let t = finishGroups(drawAll(newTournament(16), rng), rng);
+    expect(groupMatches(t)).toHaveLength(28);
+    const r = t.groupRanking!;
+    const quarters = t.matches.filter((m) => m.phase === 'quarter');
+    expect(quarters.map(pairOf)).toEqual([[r[0], r[7]], [r[3], r[4]], [r[1], r[6]], [r[2], r[5]]]);
+
+    t = playThrough(t, rng);
+    const [qf1, qf2, qf3, qf4] = quarters.map((m) => winnerOf(t.matches.find((x) => x.id === m.id)!)!);
+    const semis = t.matches.filter((m) => m.phase === 'semi').map((m) => new Set(pairOf(m)));
+    expect(semis).toEqual([new Set([qf1, qf2]), new Set([qf3, qf4])]);
+    expect(t.matches).toHaveLength(36);
+  });
+
+  it('plays the group at 4-minute halves by default with 8 teams', () => {
+    expect(defaultHalfMinutes(8).group).toBe(4);
+    expect(defaultHalfMinutes(6).group).toBe(5);
+  });
+
+  it('estimates every match before the draw', () => {
+    for (const players of [6, 8, 10, 12, 16]) {
+      const t = newTournament(players);
+      const teams = Math.ceil(players / 2);
+      const perMatch = (half: number) => half * 2 + DEFAULT_CONFIG.changeoverMinutes;
+      expect(estimatedRemainingMinutes(t)).toBeGreaterThanOrEqual(totalMatchCount(teams) * perMatch(4));
+      expect(knockoutFormat(teams)).toBeDefined();
+    }
+  });
+
+  it('refuses fewer than 6 or more than 16 players', () => {
+    expect(() => newTournament(5)).toThrow(TournamentError);
+    expect(() => createTournament({
+      id: 'x', name: 'x',
+      participantNames: Array.from({ length: 17 }, (_, i) => `P${i}`),
+      clubs: [...CLUBS, 'Napoli'],
+      config: { ...DEFAULT_CONFIG, seed: 1 },
+    })).toThrow(TournamentError);
   });
 });
