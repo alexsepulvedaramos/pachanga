@@ -6,7 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "update:clubs": "node --no-warnings scripts/update-club-ratings.ts"
   },
   "private": true,
   "packageManager": "npm@11.11.0",

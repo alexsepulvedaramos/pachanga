@@ -17,6 +17,7 @@ import {
   totalMatchCount,
 } from '../../domain/tournament';
 import { formatDuration } from '../../ui/format';
+import { ClubPicker } from './club-picker';
 
 const CLUB_SUGGESTIONS = [
   'Real Madrid', 'Man City', 'Bayern', 'PSG', 'Inter', 'Liverpool', 'Barça', 'Arsenal',
@@ -25,7 +26,7 @@ const CLUB_SUGGESTIONS = [
 
 @Component({
   selector: 'app-setup-page',
-  imports: [Brand, RouterLink],
+  imports: [Brand, RouterLink, ClubPicker],
   template: `
     <main class="mx-auto max-w-3xl px-4 pb-32 pt-6">
       <header class="flex items-center justify-between">
@@ -92,7 +93,15 @@ const CLUB_SUGGESTIONS = [
 
       <!-- Clubs -->
       <section class="mt-10">
-        <h2 class="eyebrow text-cyan">03 · Equipos de la ruleta</h2>
+        <div class="flex items-baseline justify-between gap-3">
+          <h2 class="eyebrow text-cyan">03 · Equipos de la ruleta</h2>
+          <button type="button" class="tag bg-cyan text-ink" (click)="picking.set(!picking())">
+            {{ picking() ? 'Cerrar' : 'Elegir por media' }}
+          </button>
+        </div>
+        @if (picking()) {
+          <app-club-picker [count]="clubSlots().length" (picked)="useClubs($event)" (cancelled)="picking.set(false)" />
+        }
         <div class="mt-3 grid gap-2 sm:grid-cols-2">
           @for (club of clubSlots(); track $index; let i = $index) {
             <input
@@ -245,6 +254,7 @@ export class SetupPage {
   protected readonly changeover = signal(DEFAULT_CONFIG.changeoverMinutes);
   protected readonly pin = signal('');
   protected readonly creating = signal(false);
+  protected readonly picking = signal(false);
 
   protected readonly teamCount = computed(() => teamCountFor(this.players().length));
   protected readonly validTeamCount = computed(() => {
@@ -317,6 +327,11 @@ export class SetupPage {
     const empty = slots.findIndex((c) => !c.trim());
     if (empty === -1) return;
     this.setClub(empty, club);
+  }
+
+  protected useClubs(clubs: string[]): void {
+    this.clubs.set(clubs);
+    this.picking.set(false);
   }
 
   protected moveTiebreaker(index: number, delta: number): void {

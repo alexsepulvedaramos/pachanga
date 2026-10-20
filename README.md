@@ -24,6 +24,9 @@ their own phones or on the TV.
   Injuries mid-tournament turn the partner into a solo player automatically.
 - **Red cards and injuries.** A player marked in a result misses their team's next match (the
   final is exempt); the next match shows who is out.
+- **Balanced club picker.** Pick a target rating and get clubs from the big five leagues as close
+  to it as possible, or browse them: each club shows its estimated rating, attack/midfield/defence,
+  stars and best starting XI on a pitch. Ratings are labelled with the game edition they belong to.
 - **Optional goal scorers** and a top scorers table.
 - **TV mode** with the current match, standings and upcoming fixtures in big type.
 - **Estimated finish time** from minutes per half and changeover time per phase.
@@ -60,6 +63,23 @@ Every change is a pure function `(tournament) => tournament` from `domain/tourna
 session applies it optimistically, saves it with the version it was based on, and rolls back or
 reloads if the save is rejected. Other devices receive the new document through Realtime.
 
+## Club ratings
+
+EA publishes player ratings but not team ratings or default lineups. `scripts/update-club-ratings.ts`
+reads the public feed behind [ea.com/games/ea-sports-fc/ratings](https://www.ea.com/games/ea-sports-fc/ratings)
+for every club in the big five leagues, finds each club's best XI across 4-3-3, 4-2-3-1, 4-4-2 and
+3-5-2, and averages it, which is how the game rates a team from its starting XI. The result is a
+static file per game edition in `public/data/clubs/`, with an index of the editions available.
+
+- Estimates can differ by a point or two from the game, where each club uses its real coach's
+  formation and lineup. The star rating is an approximation calibrated against published stars.
+- The feed is undocumented and has no edition parameter: it serves whatever EA considers current
+  (FC 26 when this was built). The script refuses to overwrite an edition when most ratings jump at
+  once, which is what a switch to the next game would look like; run it with the new id
+  (`node scripts/update-club-ratings.ts fc27`) to add that edition alongside the old one.
+- `.github/workflows/club-ratings.yml` refreshes the file daily and commits only when it changes.
+  The app never calls EA directly, so it keeps working with the last good data if the feed changes.
+
 ## House rules worth knowing
 
 Where the rulebook leaves room for interpretation, the app does this:
@@ -77,7 +97,8 @@ Where the rulebook leaves room for interpretation, the app does this:
 - **CI** (`.github/workflows/ci.yml`) runs the tests and a production build on every push.
 - **Keep-alive** (`.github/workflows/keep-alive.yml`) reads one row every three days so the free
   Supabase project never pauses for inactivity. GitHub disables scheduled workflows after 60 days
-  without commits; re-enable it from the Actions tab if that happens.
+  without commits; the daily club ratings commits usually prevent that, and either can be
+  re-enabled from the Actions tab.
 - **Deploys** happen on Vercel on every push to `main`.
 
 ## Running locally
