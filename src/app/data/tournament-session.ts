@@ -2,7 +2,7 @@ import { computed, DestroyRef, Injectable, inject, signal } from '@angular/core'
 import { Id, Tournament } from '../domain/types';
 import { Rng } from '../domain/rng';
 import { TournamentStore } from './tournament-store';
-import { ConflictError, WrongPinError } from './tournament-repository';
+import { ConflictError, PinLockedError, WrongPinError } from './tournament-repository';
 import { ToastService } from '../ui/toast.service';
 
 /** One open tournament: live state, admin rights and the actions that change it. */
@@ -26,7 +26,34 @@ export class TournamentSession {
   );
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.stopWatching?.());
+    // Phones lock and drop the realtime socket without telling anyone: catch up when the app
+    // comes back, when the connection returns, and every so often as a fallback.
+    const onVisible = () => document.visibilityState === 'visible' && void this.refresh();
+    const onOnline = () => void this.refresh();
+    const poll = setInterval(() => document.visibilityState === 'visible' && this.refresh(), 45_000);
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', onOnline);
+    inject(DestroyRef).onDestroy(() => {
+      this.stopWatching?.();
+      clearInterval(poll);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', onOnline);
+    });
+  }
+
+  /** Reloads the tournament if someone else saved a newer version. */
+  async refresh(): Promise<void> {
+    const id = this.tournament()?.id;
+    if (!id || this.saving()) return;
+    try {
+      const stored = await this.store.load(id);
+      if (stored.version > this.version) {
+        this.version = stored.version;
+        this.tournament.set(stored.tournament);
+      }
+    } catch {
+      /* offline: the next refresh will catch up */
+    }
   }
 
   async open(id: string): Promise<void> {
@@ -38,11 +65,15 @@ export class TournamentSession {
       this.version = stored.version;
       this.tournament.set(stored.tournament);
       this.pin.set(this.store.savedPin(id));
-      this.stopWatching = (await this.store.repo(id)).watch(id, (next) => {
-        if (next.version <= this.version) return;
-        this.version = next.version;
-        this.tournament.set(next.tournament);
-      });
+      this.stopWatching = (await this.store.repo(id)).watch(
+        id,
+        (next) => {
+          if (next.version <= this.version) return;
+          this.version = next.version;
+          this.tournament.set(next.tournament);
+        },
+        () => void this.refresh(),
+      );
     } catch (error) {
       this.loadError.set(error instanceof Error ? error.message : String(error));
     } finally {
@@ -90,7 +121,7 @@ export class TournamentSession {
       return true;
     } catch (error) {
       this.toast.error(error);
-      if (error instanceof WrongPinError) this.lock();
+      if (error instanceof WrongPinError || error instanceof PinLockedError) this.lock();
       if (error instanceof ConflictError) {
         const fresh = await this.store.load(next.id);
         this.version = fresh.version;

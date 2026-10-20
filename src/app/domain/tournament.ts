@@ -1,6 +1,7 @@
 import {
   Goal,
   Id,
+  Incident,
   KnockoutChoices,
   Match,
   Participant,
@@ -94,9 +95,26 @@ export function wheelEntries(t: Tournament): string[] {
   return remaining;
 }
 
+/** First participant in entrance order who has no club yet. */
 export function nextToSpin(t: Tournament): Participant | null {
-  const id = t.draw.order[t.draw.picks.length];
+  const assigned = new Set(t.draw.picks.map((p) => p.participantId));
+  const id = t.draw.order.find((x) => !assigned.has(x));
   return id ? participant(t, id) : null;
+}
+
+/** Puts a participant on a club by hand (or takes them off it with `null`), instead of the wheel. */
+export function assignClub(t: Tournament, participantId: Id, club: string | null): Tournament {
+  assertStage(t, 'draw');
+  participant(t, participantId);
+  const picks = t.draw.picks.filter((p) => p.participantId !== participantId);
+  if (club !== null) {
+    if (!t.clubs.includes(club)) throw new TournamentError(`Equipo desconocido: ${club}`);
+    if (picks.filter((p) => p.club === club).length >= 2) {
+      throw new TournamentError(`${club} ya tiene pareja completa.`);
+    }
+    picks.push({ participantId, club });
+  }
+  return { ...t, draw: { ...t.draw, picks } };
 }
 
 export function setEntranceOrder(t: Tournament, order: Id[]): Tournament {
@@ -183,16 +201,53 @@ export function isSolo(t: Tournament, teamId: Id): boolean {
   return activeMembers(t, teamId).length === 1;
 }
 
-/** Who plays for a team in a given match: active members plus the knockout partner or stand-in. */
+/** Who plays for a team in a given match, leaving out anyone suspended for it. */
 export function lineup(t: Tournament, m: Match, teamId: Id): Id[] {
+  const suspended = new Set(suspendedFor(t, m));
+  return fullLineup(t, m, teamId).filter((id) => !suspended.has(id));
+}
+
+/** Active members plus the knockout partner or the stand-in, ignoring suspensions. */
+function fullLineup(t: Tournament, m: Match, teamId: Id): Id[] {
   const members = activeMembers(t, teamId);
   const partner = team(t, teamId).knockoutPartnerId;
   const standIn = m.standIns?.[teamId];
-  if (members.length === 1 && m.phase !== 'group' && m.phase !== 'playoff' && partner) {
-    return [...members, partner];
-  }
+  if (members.length === 1 && isLateKnockout(m) && partner) return [...members, partner];
   if (members.length === 1 && standIn) return [...members, standIn];
   return members;
+}
+
+const isLateKnockout = (m: Match) => m.phase === 'semi' || m.phase === 'third' || m.phase === 'final';
+
+/** Players who play for this team as members or as its fixed knockout partner (not stand-ins). */
+function regulars(t: Tournament, m: Match, teamId: Id): Id[] {
+  const partner = team(t, teamId).knockoutPartnerId;
+  const members = activeMembers(t, teamId);
+  return partner && isLateKnockout(m) && members.length === 1 ? [...members, partner] : members;
+}
+
+/**
+ * Players who cannot play this match: anyone with a red card or an injury in a previous match
+ * misses the next match of their own team. The final is exempt.
+ */
+export function suspendedFor(t: Tournament, m: Match): Id[] {
+  if (m.phase === 'final') return [];
+  const index = t.matches.findIndex((x) => x.id === m.id);
+  const result: Id[] = [];
+  for (const id of [...regulars(t, m, m.homeId), ...regulars(t, m, m.awayId)]) {
+    // The most recent earlier match this player played for their own team.
+    for (let i = index - 1; i >= 0; i--) {
+      const prev = t.matches[i];
+      const plays = [prev.homeId, prev.awayId].some((teamId) => regulars(t, prev, teamId).includes(id));
+      const hadIncident = prev.incidents?.some((x) => x.participantId === id);
+      if (hadIncident) {
+        result.push(id);
+        break;
+      }
+      if (plays) break;
+    }
+  }
+  return result;
 }
 
 export function nextMatch(t: Tournament): Match | null {
@@ -234,9 +289,10 @@ function needsStandIn(t: Tournament, m: Match, teamId: Id): boolean {
  */
 function drawStandIn(t: Tournament, m: Match, teamId: Id, rng: Rng): Id {
   const busy = new Set([
-    ...lineup(t, m, m.homeId),
-    ...lineup(t, m, m.awayId),
+    ...fullLineup(t, m, m.homeId),
+    ...fullLineup(t, m, m.awayId),
     ...Object.values(m.standIns ?? {}),
+    ...suspendedFor(t, m),
   ]);
   const candidates = t.participants.filter((p) => !p.disqualified && !busy.has(p.id));
   if (candidates.length === 0) throw new TournamentError('No hay nadie libre para hacer pareja.');
@@ -265,6 +321,7 @@ export interface MatchResult {
   homePens?: number | null;
   awayPens?: number | null;
   goals?: Goal[];
+  incidents?: Incident[];
 }
 
 export function recordResult(t: Tournament, matchId: Id, result: MatchResult): Tournament {
@@ -283,6 +340,7 @@ export function recordResult(t: Tournament, matchId: Id, result: MatchResult): T
     homePens: knockout && level ? result.homePens : null,
     awayPens: knockout && level ? result.awayPens : null,
     goals: t.config.trackScorers ? (result.goals ?? []) : undefined,
+    incidents: result.incidents?.length ? result.incidents : undefined,
   };
   const next = replaceMatch(t, updated);
   return sync({ ...next, liveMatchId: t.liveMatchId === matchId ? undefined : t.liveMatchId });
@@ -307,6 +365,12 @@ function validateResult(t: Tournament, m: Match, r: MatchResult): void {
       if (r.goals.filter((g) => g.teamId === teamId).length > total) {
         throw new TournamentError('Hay más goleadores que goles.');
       }
+    }
+  }
+  if (r.incidents?.length) {
+    const playing = new Set([...lineup(t, m, m.homeId), ...lineup(t, m, m.awayId)]);
+    if (!r.incidents.every((x) => playing.has(x.participantId))) {
+      throw new TournamentError('Solo se pueden sancionar jugadores de este partido.');
     }
   }
 }

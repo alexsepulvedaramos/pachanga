@@ -130,7 +130,12 @@ import { formatClock, formatDuration } from '../../ui/format';
                           –
                         }
                       </span>
-                      <span class="truncate font-display text-lg font-bold uppercase" [class.text-volt]="row.winner === row.match.awayId">{{ session.teamName(row.match.awayId) }}</span>
+                      <span class="truncate font-display text-lg font-bold uppercase" [class.text-volt]="row.winner === row.match.awayId">
+                        {{ session.teamName(row.match.awayId) }}
+                        @if (row.match.incidents?.length) {
+                          <span class="ml-1 inline-block h-3 w-2 bg-flare align-middle" [attr.title]="row.match.incidents!.length + ' sanción(es)'"></span>
+                        }
+                      </span>
                       @if (session.isAdmin() && row.match.status === 'done') {
                         <button type="button" class="text-mist hover:text-chalk" [attr.aria-label]="'Corregir partido ' + row.number" (click)="correct(row.match)">✎</button>
                       }

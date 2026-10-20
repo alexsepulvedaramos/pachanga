@@ -4,6 +4,7 @@ import { Tournament } from '../domain/types';
 import { BACKEND } from '../config';
 import {
   ConflictError,
+  PinLockedError,
   StoredTournament,
   TournamentRepository,
   WrongPinError,
@@ -49,21 +50,27 @@ export class SupabaseTournamentRepository extends TournamentRepository {
       p_pin: pin,
       p_expected_version: expectedVersion,
     });
-    if (error) {
-      if (error.message.includes('WRONG_PIN')) throw new WrongPinError();
-      if (error.message.includes('CONFLICT')) throw new ConflictError();
-      throw new Error('No se ha podido guardar. Revisa la conexión.');
-    }
-    return { tournament, version: data as number };
+    if (error) throw new Error('No se ha podido guardar. Revisa la conexión.');
+    // Failures come back as negative codes so the server can record failed PIN attempts.
+    const version = data as number;
+    if (version === -1) throw new WrongPinError();
+    if (version === -2) throw new ConflictError();
+    if (version === -3) throw new PinLockedError();
+    return { tournament, version };
   }
 
   async verifyPin(id: string, pin: string): Promise<boolean> {
     const { data, error } = await this.client.rpc('verify_tournament_pin', { p_id: id, p_pin: pin });
     if (error) throw new Error('No se ha podido comprobar el PIN. Revisa la conexión.');
+    if (data === null) throw new PinLockedError();
     return data === true;
   }
 
-  watch(id: string, onChange: (stored: StoredTournament) => void): () => void {
+  watch(
+    id: string,
+    onChange: (stored: StoredTournament) => void,
+    onReconnect?: () => void,
+  ): () => void {
     const channel = this.client
       .channel(`tournament:${id}`)
       .on(
@@ -74,7 +81,9 @@ export class SupabaseTournamentRepository extends TournamentRepository {
           onChange({ tournament: row.state, version: row.version });
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') onReconnect?.();
+      });
     return () => void this.client.removeChannel(channel);
   }
 }

@@ -1,7 +1,7 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, OnInit, output, signal } from '@angular/core';
 import { TournamentSession } from '../../data/tournament-session';
 import { Stepper } from '../../ui/stepper';
-import { Goal, Id, Match } from '../../domain/types';
+import { Goal, Id, Incident, Match } from '../../domain/types';
 import { lineup, recordResult } from '../../domain/tournament';
 
 @Component({
@@ -60,13 +60,47 @@ import { lineup, recordResult } from '../../domain/tournament';
       </div>
     }
 
+    <details class="mt-5 border-t border-line pt-4" [open]="incidents().length > 0">
+      <summary class="eyebrow cursor-pointer text-mist">Expulsiones y lesiones</summary>
+      <p class="mt-1 text-xs text-mist">Quien se marque se pierde el siguiente partido de su equipo (salvo la final).</p>
+      <div class="mt-3 grid grid-cols-2 gap-4">
+        @for (side of sides(); track side.teamId) {
+          <ul class="space-y-1.5">
+            @for (pid of side.players; track pid) {
+              <li class="flex items-center gap-1.5">
+                <span class="flex-1 truncate text-sm">{{ session.personName(pid) }}</span>
+                <button
+                  type="button"
+                  class="tag"
+                  [class]="incident(pid) === 'redCard' ? 'bg-flare text-ink' : 'bg-line text-mist'"
+                  [attr.aria-pressed]="incident(pid) === 'redCard'"
+                  (click)="toggleIncident(pid, 'redCard')"
+                >
+                  Roja
+                </button>
+                <button
+                  type="button"
+                  class="tag"
+                  [class]="incident(pid) === 'injury' ? 'bg-gold text-ink' : 'bg-line text-mist'"
+                  [attr.aria-pressed]="incident(pid) === 'injury'"
+                  (click)="toggleIncident(pid, 'injury')"
+                >
+                  Lesión
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </details>
+
     <div class="mt-6 flex justify-center gap-3">
       <button type="button" class="btn-secondary" (click)="cancelled.emit()">Cancelar</button>
       <button type="button" class="btn-primary px-10" [disabled]="session.saving()" (click)="save()">Guardar resultado</button>
     </div>
   `,
 })
-export class ResultForm {
+export class ResultForm implements OnInit {
   protected readonly session = inject(TournamentSession);
 
   readonly match = input.required<Match>();
@@ -79,6 +113,7 @@ export class ResultForm {
   protected readonly homePens = signal(0);
   protected readonly awayPens = signal(0);
   protected readonly goals = signal<Goal[]>([]);
+  protected readonly incidents = signal<Incident[]>([]);
 
   protected readonly knockout = computed(() => this.match().phase !== 'group');
   protected readonly level = computed(() => this.knockout() && this.home() === this.away());
@@ -94,10 +129,6 @@ export class ResultForm {
   });
 
   ngOnInit(): void {
-    this.prefill();
-  }
-
-  private prefill(): void {
     const m = this.match();
     if (m.status === 'done') {
       this.home.set(m.homeGoals ?? 0);
@@ -106,7 +137,21 @@ export class ResultForm {
       this.homePens.set(m.homePens ?? 0);
       this.awayPens.set(m.awayPens ?? 0);
       this.goals.set(m.goals ?? []);
+      this.incidents.set(m.incidents ?? []);
     }
+  }
+
+  protected incident(participantId: Id): Incident['kind'] | null {
+    return this.incidents().find((x) => x.participantId === participantId)?.kind ?? null;
+  }
+
+  /** One incident per player: tapping the active one clears it, the other one replaces it. */
+  protected toggleIncident(participantId: Id, kind: Incident['kind']): void {
+    const current = this.incident(participantId);
+    this.incidents.update((list) => {
+      const rest = list.filter((x) => x.participantId !== participantId);
+      return current === kind ? rest : [...rest, { participantId, kind }];
+    });
   }
 
   protected assigned(teamId: Id): number {
@@ -147,6 +192,7 @@ export class ResultForm {
         homePens: this.level() ? this.homePens() : null,
         awayPens: this.level() ? this.awayPens() : null,
         goals: trimmed,
+        incidents: this.incidents(),
       }),
     );
     if (ok) this.saved.emit();

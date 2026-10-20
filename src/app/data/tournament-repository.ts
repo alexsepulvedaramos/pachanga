@@ -17,6 +17,12 @@ export class WrongPinError extends Error {
   }
 }
 
+export class PinLockedError extends Error {
+  constructor() {
+    super('Demasiados PIN incorrectos. Espera 10 minutos y vuelve a probar.');
+  }
+}
+
 export class NotFoundError extends Error {
   constructor() {
     super('No existe ningún torneo con ese código.');
@@ -32,8 +38,15 @@ export abstract class TournamentRepository {
   abstract load(id: string): Promise<StoredTournament | null>;
   abstract save(tournament: Tournament, pin: string, expectedVersion: number): Promise<StoredTournament>;
   abstract verifyPin(id: string, pin: string): Promise<boolean>;
-  /** Calls back on every change made elsewhere. Returns an unsubscribe function. */
-  abstract watch(id: string, onChange: (stored: StoredTournament) => void): () => void;
+  /**
+   * Calls back on every change made elsewhere, and `onReconnect` whenever the live channel
+   * (re)connects, since changes may have been missed meanwhile. Returns an unsubscribe function.
+   */
+  abstract watch(
+    id: string,
+    onChange: (stored: StoredTournament) => void,
+    onReconnect?: () => void,
+  ): () => void;
 }
 
 export async function hashPin(id: string, pin: string): Promise<string> {

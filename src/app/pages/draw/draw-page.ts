@@ -5,6 +5,7 @@ import { Wheel } from '../../ui/wheel';
 import { clubColor } from '../../ui/club-colors';
 import { Tournament } from '../../domain/types';
 import {
+  assignClub,
   disqualify,
   drawnPairs,
   finishDraw,
@@ -30,6 +31,43 @@ interface Reveal {
       @if (t.stage === 'draw') {
         <div class="grid gap-8 lg:grid-cols-[1fr_22rem]">
           <section>
+            @if (session.isAdmin()) {
+              <div class="mb-6 flex justify-center gap-1" role="tablist" aria-label="Cómo formar parejas">
+                <button type="button" role="tab" class="tag px-4 py-1.5 text-sm" [attr.aria-selected]="mode() === 'wheel'"
+                  [class]="mode() === 'wheel' ? 'bg-volt text-ink' : 'bg-line text-mist'" (click)="mode.set('wheel')">Ruleta</button>
+                <button type="button" role="tab" class="tag px-4 py-1.5 text-sm" [attr.aria-selected]="mode() === 'manual'"
+                  [class]="mode() === 'manual' ? 'bg-volt text-ink' : 'bg-line text-mist'" (click)="mode.set('manual')">A dedo</button>
+              </div>
+            }
+
+            @if (mode() === 'manual' && session.isAdmin()) {
+              <ul class="space-y-1.5">
+                @for (row of manualRows(); track row.id) {
+                  <li class="cut-sm flex items-center gap-3 bg-pitch py-2 pl-0 pr-3">
+                    <span class="h-10 w-1.5" [style.background]="row.club ? color(t, row.club) : 'transparent'"></span>
+                    <span class="flex-1 font-medium">{{ row.name }}</span>
+                    <select
+                      class="field w-44 py-1.5 font-display font-bold uppercase"
+                      [attr.aria-label]="'Equipo de ' + row.name"
+                      [value]="row.club ?? ''"
+                      (change)="assign(row.id, $any($event.target).value)"
+                    >
+                      <option value="">— Sin equipo —</option>
+                      @for (club of t.clubs; track club) {
+                        <option [value]="club" [disabled]="isFull(club) && row.club !== club" [selected]="row.club === club">
+                          {{ club }} {{ slotsLabel(club, row.club) }}
+                        </option>
+                      }
+                    </select>
+                  </li>
+                }
+              </ul>
+              @if (!spinner()) {
+                <div class="mt-6 flex justify-center">
+                  <button type="button" class="btn-primary px-10 text-xl" [disabled]="busy()" (click)="close()">Generar calendario</button>
+                </div>
+              }
+            } @else {
             <div class="text-center">
               @if (spinner(); as s) {
                 <p class="eyebrow text-mist">Entrada {{ t.draw.picks.length + 1 }} de {{ t.participants.length }}</p>
@@ -82,6 +120,7 @@ interface Reveal {
                   </p>
                 }
               </div>
+            }
             }
           </section>
 
@@ -177,6 +216,17 @@ export class DrawPage {
   private readonly wheel = viewChild<Wheel>('wheel');
 
   protected readonly busy = signal(false);
+  protected readonly mode = signal<'wheel' | 'manual'>('wheel');
+
+  protected readonly manualRows = computed(() => {
+    const t = this.session.tournament();
+    if (!t) return [];
+    return t.draw.order.map((id) => ({
+      id,
+      name: this.session.personName(id),
+      club: t.draw.picks.find((p) => p.participantId === id)?.club ?? null,
+    }));
+  });
   protected readonly reveal = signal<Reveal | null>(null);
   private pending: Tournament | null = null;
 
@@ -256,6 +306,25 @@ export class DrawPage {
       [order[index], order[index + delta]] = [order[index + delta], order[index]];
       return setEntranceOrder(t, order);
     });
+  }
+
+  private taken(club: string): number {
+    return this.session.tournament()?.draw.picks.filter((p) => p.club === club).length ?? 0;
+  }
+
+  protected isFull(club: string): boolean {
+    return this.taken(club) >= 2;
+  }
+
+  protected slotsLabel(club: string, current: string | null): string {
+    if (current === club) return '';
+    const free = 2 - this.taken(club);
+    return free <= 0 ? '(completo)' : `(${free} libre${free > 1 ? 's' : ''})`;
+  }
+
+  protected async assign(participantId: string, club: string): Promise<void> {
+    this.reveal.set(null);
+    await this.session.apply((t) => assignClub(t, participantId, club || null));
   }
 
   /** Injury or expulsion: the partner becomes a solo player and gets a drawn partner per match. */

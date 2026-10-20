@@ -11,6 +11,7 @@ their own phones or on the TV.
 
 - **Pairs draw with a wheel.** Every club appears twice; the second time a club comes out, a pair
   is formed. With an odd number of players one club comes out once and its owner plays solo.
+  Pairs can also be assigned by hand.
 - **Group stage on a single console.** Round-robin ordered so no team plays two matches in a row
   and everybody stays within one match of each other.
 - **Live standings** with tiebreakers chosen and ordered when the tournament is set up
@@ -21,10 +22,14 @@ their own phones or on the TV.
 - **Solo player support.** Before each of their matches the solo player gets a partner drawn from
   whoever isn't playing; for the knockout stage they draw a fixed partner from eliminated players.
   Injuries mid-tournament turn the partner into a solo player automatically.
+- **Red cards and injuries.** A player marked in a result misses their team's next match (the
+  final is exempt); the next match shows who is out.
 - **Optional goal scorers** and a top scorers table.
 - **TV mode** with the current match, standings and upcoming fixtures in big type.
 - **Estimated finish time** from minutes per half and changeover time per phase.
-- **Realtime sync** across devices; anyone with the code can watch, only the admin PIN can write.
+- **Realtime sync** across devices, with a catch-up refresh when a phone wakes up or reconnects.
+  Anyone with the code can watch; only the admin PIN can write, and five wrong PINs lock the
+  tournament for ten minutes.
 - **Demo mode** that runs entirely in the browser.
 
 ## Stack
@@ -54,6 +59,26 @@ supabase/
 Every change is a pure function `(tournament) => tournament` from `domain/tournament.ts`. The
 session applies it optimistically, saves it with the version it was based on, and rolls back or
 reloads if the save is rejected. Other devices receive the new document through Realtime.
+
+## House rules worth knowing
+
+Where the rulebook leaves room for interpretation, the app does this:
+
+- **Solo player in the playoff:** nobody is eliminated yet, so they get a drawn stand-in per match,
+  as in the group stage. The fixed partner from the eliminated players is drawn for the semis.
+- **Group winner's pick:** the 1st can choose any of the other semi-finalists, the 2nd included.
+- **A withdrawal while someone already plays solo:** both play as solo players with drawn
+  stand-ins rather than merging into one team.
+- **Suspended player:** their partner plays the match alone; a solo player who is suspended is
+  replaced by the drawn stand-in only.
+
+## Operations
+
+- **CI** (`.github/workflows/ci.yml`) runs the tests and a production build on every push.
+- **Keep-alive** (`.github/workflows/keep-alive.yml`) reads one row every three days so the free
+  Supabase project never pauses for inactivity. GitHub disables scheduled workflows after 60 days
+  without commits; re-enable it from the Actions tab if that happens.
+- **Deploys** happen on Vercel on every push to `main`.
 
 ## Running locally
 

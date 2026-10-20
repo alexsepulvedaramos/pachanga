@@ -1,0 +1,23 @@
+name: Keep database awake
+
+# Free Supabase projects pause after a week without activity. A tiny read every three days keeps
+# the tournament database available between tournaments.
+
+on:
+  schedule:
+    - cron: '17 6 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    env:
+      # Public values, the same ones shipped in src/app/config.ts.
+      SUPABASE_URL: https://khzijeebbnejsqqpwkty.supabase.co
+      SUPABASE_KEY: sb_publishable_PZthppADtf8_HTTuH3RZfQ_O6TdJdK8
+    steps:
+      - name: Query the tournaments table
+        run: |
+          curl --fail --silent --show-error \
+            -H "apikey: $SUPABASE_KEY" \
+            "$SUPABASE_URL/rest/v1/tournaments?select=id&limit=1"

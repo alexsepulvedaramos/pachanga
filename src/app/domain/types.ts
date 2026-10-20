@@ -25,6 +25,12 @@ export interface Goal {
   scorerId: Id | null;
 }
 
+/** A red card or an injury: the player misses their team's next match (except the final). */
+export interface Incident {
+  participantId: Id;
+  kind: 'redCard' | 'injury';
+}
+
 export interface Match {
   id: Id;
   phase: Phase;
@@ -42,6 +48,7 @@ export interface Match {
   /** Partner drawn for a solo team for this single match, keyed by team id. */
   standIns?: Record<Id, Id>;
   goals?: Goal[];
+  incidents?: Incident[];
 }
 
 export type TiebreakCriterion =
@@ -87,7 +94,7 @@ export interface KnockoutChoices {
 export interface DrawState {
   /** Participant ids in entrance order. */
   order: Id[];
-  /** Club drawn by each participant, in the same order. */
+  /** Club given to each participant, by the wheel or picked by hand, in the order assigned. */
   picks: { participantId: Id; club: string }[];
 }
 
