@@ -6,6 +6,8 @@ import { TournamentSession } from '../../data/tournament-session';
 import { MatchCard } from '../../ui/match-card';
 import { DecisionPanel } from '../../ui/decision-panel';
 import { ResultForm } from './result-form';
+import { MatchSummary } from './match-summary';
+import { Modal } from '../../ui/modal';
 import { Id, Match, Phase } from '../../domain/types';
 import { PHASE_LABELS, winnerOf } from '../../domain/knockout';
 import {
@@ -24,7 +26,7 @@ import { formatClock, formatDuration } from '../../ui/format';
 
 @Component({
   selector: 'app-matches-page',
-  imports: [MatchCard, DecisionPanel, ResultForm, RouterLink, MyTurnPanel],
+  imports: [MatchCard, DecisionPanel, ResultForm, MatchSummary, Modal, RouterLink, MyTurnPanel],
   template: `
     @if (session.tournament(); as t) {
       @if (t.stage === 'draw') {
@@ -84,11 +86,6 @@ import { formatClock, formatDuration } from '../../ui/format';
 
             @if (session.isAdmin()) {
               @if (m.status === 'live') {
-                @if (editing() === m.id) {
-                  <div class="mt-6 border-t border-line pt-6">
-                    <app-result-form [match]="m" (saved)="editing.set(null)" (cancelled)="editing.set(null)" />
-                  </div>
-                } @else {
                   <div class="mt-6 flex flex-wrap justify-center gap-3">
                     <button type="button" class="btn-primary px-10 text-lg" (click)="editing.set(m.id)">Meter resultado</button>
                     @for (teamId of soloTeams(m); track teamId) {
@@ -97,7 +94,6 @@ import { formatClock, formatDuration } from '../../ui/format';
                       </button>
                     }
                   </div>
-                }
               } @else {
                 <div class="mt-6 flex justify-center">
                   <button type="button" class="btn-primary px-10 text-lg" [disabled]="session.saving()" (click)="start(m.id)">
@@ -119,37 +115,40 @@ import { formatClock, formatDuration } from '../../ui/format';
             <ol class="mt-2 divide-y divide-line/60">
               @for (row of group.rows; track row.match.id) {
                 <li>
-                  @if (editing() === row.match.id) {
-                    <div class="bg-pitch p-4">
-                      <app-result-form [match]="row.match" (saved)="editing.set(null)" (cancelled)="editing.set(null)" />
-                    </div>
-                  } @else {
-                    <div
-                      class="grid grid-cols-[2rem_1fr_auto_1fr_2rem] items-center gap-2 border-l-4 py-2.5 pl-1"
-                      [class]="row.mine ? 'border-volt bg-volt/10' : 'border-transparent'"
-                      [class.text-mist]="row.match.status === 'pending' && !row.mine"
-                    >
-                      <span class="font-display text-sm font-bold text-mist">{{ row.number }}</span>
-                      <span class="truncate text-right font-display text-lg font-bold uppercase" [class.text-volt]="row.winner === row.match.homeId">{{ session.teamName(row.match.homeId) }}</span>
-                      <span class="heading min-w-16 bg-pitch px-2 py-0.5 text-center text-xl tabular-nums" [class.text-flare]="row.match.status === 'live'">
-                        @if (row.match.status === 'done') {
-                          {{ row.match.homeGoals }}–{{ row.match.awayGoals }}
-                        } @else if (row.match.status === 'live') {
-                          •
-                        } @else {
-                          –
-                        }
-                      </span>
-                      <span class="truncate font-display text-lg font-bold uppercase" [class.text-volt]="row.winner === row.match.awayId">
-                        {{ session.teamName(row.match.awayId) }}
-                        @if (row.match.incidents?.length) {
-                          <span class="ml-1 inline-block h-3 w-2 bg-flare align-middle" [attr.title]="row.match.incidents!.length + ' sanción(es)'"></span>
-                        }
-                      </span>
-                      @if (session.isAdmin() && row.match.status === 'done') {
-                        <button type="button" class="text-mist hover:text-chalk" [attr.aria-label]="'Corregir partido ' + row.number" (click)="correct(row.match)">✎</button>
+                  <div
+                    class="grid grid-cols-[2rem_1fr_auto_1fr_2rem] items-center gap-2 border-l-4 py-2.5 pl-1"
+                    [class]="row.mine ? 'border-volt bg-volt/10' : 'border-transparent'"
+                    [class.text-mist]="row.match.status === 'pending' && !row.mine"
+                    [class.cursor-pointer]="row.match.status === 'done'"
+                    [attr.role]="row.match.status === 'done' ? 'button' : null"
+                    [attr.tabindex]="row.match.status === 'done' ? 0 : null"
+                    [attr.aria-expanded]="row.match.status === 'done' ? expanded() === row.match.id : null"
+                    (click)="toggleSummary(row.match)"
+                    (keydown.enter)="toggleSummary(row.match)"
+                  >
+                    <span class="font-display text-sm font-bold text-mist">{{ row.number }}</span>
+                    <span class="truncate text-right font-display text-lg font-bold uppercase" [class.text-volt]="row.winner === row.match.homeId">{{ session.teamName(row.match.homeId) }}</span>
+                    <span class="heading min-w-16 bg-raised px-2 py-0.5 text-center text-xl tabular-nums" [class.text-flare]="row.match.status === 'live'">
+                      @if (row.match.status === 'done') {
+                        <span [class.text-volt]="row.winner === row.match.homeId">{{ row.match.homeGoals }}</span><span class="text-mist">–</span><span [class.text-volt]="row.winner === row.match.awayId">{{ row.match.awayGoals }}</span>
+                      } @else if (row.match.status === 'live') {
+                        •
+                      } @else {
+                        –
                       }
-                    </div>
+                    </span>
+                    <span class="truncate font-display text-lg font-bold uppercase" [class.text-volt]="row.winner === row.match.awayId">
+                      {{ session.teamName(row.match.awayId) }}
+                      @if (row.match.incidents?.length) {
+                        <span class="ml-1 inline-block h-3 w-2 bg-flare align-middle" [attr.title]="row.match.incidents!.length + ' sanción(es)'"></span>
+                      }
+                    </span>
+                    @if (session.isAdmin() && row.match.status === 'done') {
+                      <button type="button" class="text-mist hover:text-chalk" [attr.aria-label]="'Corregir partido ' + row.number" (click)="$event.stopPropagation(); correct(row.match)">✎</button>
+                    }
+                  </div>
+                  @if (expanded() === row.match.id && row.match.status === 'done') {
+                    <app-match-summary [match]="row.match" />
                   }
                 </li>
               }
@@ -157,12 +156,28 @@ import { formatClock, formatDuration } from '../../ui/format';
           </section>
         }
       }
+
+      @if (editingMatch(); as em) {
+        <app-modal
+          [eyebrow]="phaseLabel(em)"
+          [heading]="session.teamName(em.homeId) + ' vs ' + session.teamName(em.awayId)"
+          (closed)="editing.set(null)"
+        >
+          <app-result-form [match]="em" (saved)="editing.set(null)" (cancelled)="editing.set(null)" />
+        </app-modal>
+      }
     }
   `,
 })
 export class MatchesPage {
   protected readonly session = inject(TournamentSession);
   protected readonly editing = signal<Id | null>(null);
+  /** Finished match whose summary is open. */
+  protected readonly expanded = signal<Id | null>(null);
+  protected readonly editingMatch = computed(() => {
+    const id = this.editing();
+    return id ? (this.session.tournament()?.matches.find((m) => m.id === id) ?? null) : null;
+  });
   private readonly now = signal(Date.now());
 
   private readonly toast = inject(ToastService);
@@ -252,6 +267,11 @@ export class MatchesPage {
 
   protected async redraw(matchId: Id, teamId: Id): Promise<void> {
     await this.session.apply((t, rng) => redrawStandIn(t, matchId, teamId, rng));
+  }
+
+  protected toggleSummary(m: Match): void {
+    if (m.status !== 'done') return;
+    this.expanded.update((id) => (id === m.id ? null : m.id));
   }
 
   /** Opens the result form for a finished match if nothing depends on it yet. */

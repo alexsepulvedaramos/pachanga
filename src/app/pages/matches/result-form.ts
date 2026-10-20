@@ -9,16 +9,38 @@ import { ToastService } from '../../ui/toast.service';
 /** Lower case without accents, for searching names. */
 const fold = (text: string) => text.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
 
+/**
+ * Goals of a finished match with any goal the score has but no scorer was given for listed as
+ * unassigned, so the score stays the same when scorers drive it.
+ */
+function withUnassigned(m: Match): Goal[] {
+  const goals = [...(m.goals ?? [])];
+  for (const [teamId, total] of [[m.homeId, m.homeGoals ?? 0], [m.awayId, m.awayGoals ?? 0]] as const) {
+    const missing = total - goals.filter((g) => g.teamId === teamId).length;
+    for (let i = 0; i < missing; i++) goals.push({ teamId, scorerId: null });
+  }
+  return goals;
+}
+
 @Component({
   selector: 'app-result-form',
   imports: [Stepper],
   template: `
     @let m = match();
-    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-      <div class="flex justify-center"><app-stepper [(value)]="home" [label]="'goles ' + session.teamName(m.homeId)" /></div>
-      <span class="heading text-3xl text-mist">–</span>
-      <div class="flex justify-center"><app-stepper [(value)]="away" [label]="'goles ' + session.teamName(m.awayId)" /></div>
-    </div>
+    @if (trackScorers()) {
+      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-center" aria-live="polite">
+        <span class="heading text-6xl tabular-nums">{{ home() }}</span>
+        <span class="heading text-3xl text-mist">–</span>
+        <span class="heading text-6xl tabular-nums">{{ away() }}</span>
+      </div>
+      <p class="mt-1 text-center text-xs text-mist">Toca quién marca cada gol; el marcador se suma solo.</p>
+    } @else {
+      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        <div class="flex justify-center"><app-stepper [(value)]="home" [label]="'goles ' + session.teamName(m.homeId)" /></div>
+        <span class="heading text-3xl text-mist">–</span>
+        <div class="flex justify-center"><app-stepper [(value)]="away" [label]="'goles ' + session.teamName(m.awayId)" /></div>
+      </div>
+    }
 
     @if (knockout()) {
       <label class="mt-4 flex items-center justify-center gap-2 text-sm text-mist">
@@ -43,17 +65,18 @@ const fold = (text: string) => text.normalize('NFD').replace(/\p{Diacritic}/gu, 
           <div>
             <p class="eyebrow text-mist">Goles · {{ session.teamName(side.teamId) }}</p>
             <ul class="mt-2 space-y-1.5">
-              @for (pid of side.players; track pid) {
+              @for (pid of side.scorers; track $index) {
                 <li class="flex items-center gap-2">
                   <button
                     type="button"
                     class="slant-sm flex-1 bg-raised px-3 py-2 text-left text-sm font-medium hover:bg-line"
+                    [class.text-mist]="pid === null"
                     (click)="addScorer(side.teamId, pid)"
                   >
-                    ⚽ {{ session.personName(pid) }}
+                    ⚽ {{ pid === null ? 'En propia' : session.personName(pid) }}
                   </button>
                   @if (count(side.teamId, pid); as n) {
-                    <button type="button" class="tag bg-volt text-ink" (click)="removeScorer(side.teamId, pid)" [attr.aria-label]="'Quitar gol de ' + session.personName(pid)">
+                    <button type="button" class="tag bg-volt text-ink" (click)="removeScorer(side.teamId, pid)" [attr.aria-label]="'Quitar un gol de ' + (pid === null ? 'en propia' : session.personName(pid))">
                       {{ n }} ✕
                     </button>
                   }
@@ -161,8 +184,8 @@ export class ResultForm implements OnInit {
     const t = this.session.tournament()!;
     const m = this.match();
     return [
-      { teamId: m.homeId, players: lineup(t, m, m.homeId), goals: this.home() },
-      { teamId: m.awayId, players: lineup(t, m, m.awayId), goals: this.away() },
+      { teamId: m.homeId, scorers: [...lineup(t, m, m.homeId), null] },
+      { teamId: m.awayId, scorers: [...lineup(t, m, m.awayId), null] },
     ];
   });
 
@@ -175,7 +198,7 @@ export class ResultForm implements OnInit {
       this.extraTime.set(!!m.extraTime);
       this.homePens.set(m.homePens ?? 0);
       this.awayPens.set(m.awayPens ?? 0);
-      this.goals.set(m.goals ?? []);
+      this.goals.set(this.trackScorers() ? withUnassigned(m) : (m.goals ?? []));
       this.incidents.set((m.incidents ?? []).filter((x) => typeof x.player === 'string'));
     }
   }
@@ -244,18 +267,20 @@ export class ResultForm implements OnInit {
     return this.goals().filter((g) => g.teamId === teamId).length;
   }
 
-  protected count(teamId: Id, scorerId: Id): number {
+  protected count(teamId: Id, scorerId: Id | null): number {
     return this.goals().filter((g) => g.teamId === teamId && g.scorerId === scorerId).length;
   }
 
-  /** Adding a scorer beyond the current score also adds the goal to the score. */
-  protected addScorer(teamId: Id, scorerId: Id): void {
+  /** With scorers on, each goal is added and removed through its scorer and the score follows. */
+  protected addScorer(teamId: Id, scorerId: Id | null): void {
     const score = teamId === this.match().homeId ? this.home : this.away;
-    if (this.assigned(teamId) >= score()) score.set(score() + 1);
+    score.set(score() + 1);
     this.goals.update((list) => [...list, { teamId, scorerId }]);
   }
 
-  protected removeScorer(teamId: Id, scorerId: Id): void {
+  protected removeScorer(teamId: Id, scorerId: Id | null): void {
+    const score = teamId === this.match().homeId ? this.home : this.away;
+    score.set(Math.max(0, score() - 1));
     this.goals.update((list) => {
       const index = list.findIndex((g) => g.teamId === teamId && g.scorerId === scorerId);
       return list.filter((_, i) => i !== index);

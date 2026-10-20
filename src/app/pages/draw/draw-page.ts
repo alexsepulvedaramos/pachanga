@@ -185,7 +185,7 @@ interface Reveal {
         <h1 class="heading text-4xl">Parejas</h1>
         <ul class="mt-6 grid gap-3 sm:grid-cols-2">
           @for (team of t.teams; track team.id) {
-            <li class="cut flex items-center gap-4 bg-pitch py-3 pl-0 pr-4">
+            <li class="cut flex flex-wrap items-center gap-x-4 bg-pitch py-3 pl-0 pr-4">
               <span class="h-14 w-2" [style.background]="color(t, team.club)"></span>
               <div class="min-w-0 flex-1">
                 <p class="heading text-2xl">{{ team.club }}</p>
@@ -203,18 +203,26 @@ interface Reveal {
                 </p>
               </div>
               @if (session.isAdmin() && t.stage !== 'finished') {
-                <details class="relative">
-                  <summary class="cursor-pointer list-none px-2 text-mist hover:text-chalk" aria-label="Opciones">⋯</summary>
-                  <div class="absolute right-0 z-10 mt-1 w-48 bg-raised p-1">
+                <button
+                  type="button"
+                  class="px-2 text-xl text-mist hover:text-chalk"
+                  [attr.aria-expanded]="menuFor() === team.id"
+                  [attr.aria-label]="'Opciones de ' + team.club"
+                  (click)="menuFor.set(menuFor() === team.id ? null : team.id)"
+                >
+                  ⋯
+                </button>
+                @if (menuFor() === team.id) {
+                  <div class="mt-3 flex basis-full animate-rise flex-wrap gap-2 border-t border-line pl-6 pt-3">
                     @for (id of team.memberIds; track id) {
                       @if (!session.people().get(id)?.disqualified) {
-                        <button type="button" class="block w-full px-3 py-2 text-left text-sm hover:bg-line" (click)="disqualify(id)">
+                        <button type="button" class="tag bg-flare/15 px-3 py-1.5 text-flare hover:bg-flare hover:text-ink" (click)="menuFor.set(null); disqualify(id)">
                           Baja de {{ session.personName(id) }}
                         </button>
                       }
                     }
                   </div>
-                </details>
+                }
               }
             </li>
           }
@@ -238,6 +246,8 @@ export class DrawPage {
   private readonly wheel = viewChild<Wheel>('wheel');
 
   protected readonly busy = signal(false);
+  /** Team whose withdrawal options are open. */
+  protected readonly menuFor = signal<string | null>(null);
   protected readonly mode = signal<'wheel' | 'manual'>('wheel');
 
   protected readonly manualRows = computed(() => {

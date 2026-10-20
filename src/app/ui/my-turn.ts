@@ -4,17 +4,40 @@ import { ToastService } from './toast.service';
 import { PushNotifications } from '../data/push-notifications';
 import { myTurn, MyTurn } from '../domain/tournament';
 import { formatClock, formatDuration } from './format';
+import { Modal } from './modal';
 
 /** "Who are you?" picker, then where that person stands: playing now, how long until they play… */
 @Component({
   selector: 'app-my-turn',
+  imports: [Modal],
   template: `
     @if (session.tournament(); as t) {
-      @if (choosing() || !session.me()) {
+      @if (pickerOpen()) {
+        <app-modal eyebrow="Para ver tus partidos" heading="¿Quién eres?" (closed)="closePicker()">
+          <p class="mb-4 text-sm text-mist">
+            Tus partidos salen destacados, ves cuánto falta para que te toque y puedes activar los avisos.
+          </p>
+          <div class="flex flex-wrap gap-1.5">
+            @for (p of t.participants; track p.id) {
+              <button
+                type="button"
+                class="tag px-4 py-2 text-base"
+                [class]="session.me() === p.id ? 'bg-volt text-ink' : 'bg-line text-chalk hover:bg-raised'"
+                (click)="choose(p.id)"
+              >
+                {{ p.name }}
+              </button>
+            }
+          </div>
+        </app-modal>
+      }
+
+      @if (!session.me()) {
         <section class="cut-sm bg-pitch p-4">
           <p class="eyebrow text-cyan">¿Quién eres?</p>
           <p class="mt-1 text-sm text-mist">Elige tu nombre para ver tus partidos destacados y cuándo te toca.</p>
-          <div class="mt-3 flex flex-wrap gap-1.5">
+          <div class="mt-3">
+          <div class="flex flex-wrap gap-1.5">
             @for (p of t.participants; track p.id) {
               <button
                 type="button"
@@ -25,9 +48,7 @@ import { formatClock, formatDuration } from './format';
                 {{ p.name }}
               </button>
             }
-            @if (session.me()) {
-              <button type="button" class="tag bg-transparent px-3 py-1.5 text-sm text-mist" (click)="choosing.set(false)">Cancelar</button>
-            }
+          </div>
           </div>
         </section>
       } @else if (turn(); as turn) {
@@ -106,6 +127,16 @@ export class MyTurnPanel {
   private readonly toast = inject(ToastService);
   private readonly push = inject(PushNotifications);
   protected readonly choosing = signal(false);
+  /** Closed without picking: the picker stays on the page instead of popping up again. */
+  private readonly dismissed = signal(false);
+  protected readonly pickerOpen = computed(
+    () => this.choosing() || (!this.session.me() && !this.dismissed()),
+  );
+
+  protected closePicker(): void {
+    this.choosing.set(false);
+    this.dismissed.set(true);
+  }
 
   protected readonly turn = computed<MyTurn | null>(() => {
     const t = this.session.tournament();
