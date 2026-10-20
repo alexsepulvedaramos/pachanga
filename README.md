@@ -1,6 +1,6 @@
-# P0PPER CUP
+# Pachanga
 
-Tournament manager for 2v2 football video game nights: one console, a living room full of
+Tournament manager for 2v2 football video game nights — live at [pachanga-fc.vercel.app](https://pachanga-fc.vercel.app). One console,
 friends, and a phone in everyone's pocket.
 
 The admin runs the night from their phone — pairs drawn with a prize wheel, results entered as
@@ -28,7 +28,11 @@ their own phones or on the TV.
   to it as possible, or browse them: each club shows its estimated rating, attack/midfield/defence,
   stars and best starting XI on a pitch. Ratings are labelled with the game edition they belong to.
 - **Optional goal scorers** and a top scorers table.
+- **Your matches.** Each phone can say who is holding it: that player's matches are highlighted and
+  a panel says whether it's their turn, how many matches until theirs and roughly at what time.
 - **TV mode** with the current match, standings and upcoming fixtures in big type.
+- **Installable** as a PWA (manifest, maskable icons, service worker), with an install banner that
+  uses the browser prompt on Android/desktop and explains Add to Home Screen on iOS.
 - **Estimated finish time** from minutes per half and changeover time per phase.
 - **Realtime sync** across devices, with a catch-up refresh when a phone wakes up or reconnects.
   Anyone with the code can watch; only the admin PIN can write, and five wrong PINs lock the
