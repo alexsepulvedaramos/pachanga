@@ -1,5 +1,5 @@
-// Renders every app icon from the Pachanga mark. Needs @resvg/resvg-js:
-//   npm i --no-save @resvg/resvg-js && node scripts/icons/render-icons.mjs
+// Renders every app icon from the Pachanga mark:
+//   node scripts/icons/render-icons.mjs
 import { writeFileSync } from 'node:fs';
 import { Resvg } from '@resvg/resvg-js';
 import { COLORS, iconSvg } from './pachanga-mark.mjs';
@@ -25,4 +25,14 @@ for (const size of [192, 512]) writeFileSync(out(`icons/maskable-${size}x${size}
 writeFileSync(out('icons/apple-touch-icon.png'), png(apple, 180));
 // The favicon doubles as the logo in the app header.
 writeFileSync(out('favicon.svg'), rounded);
+
+// Notification badge: Android draws it from the alpha channel only, so it must be a white
+// silhouette on transparent. The mark is used as a luminance mask: the P stays solid, the rim
+// around the ball and the pentagon become see-through.
+const maskBody = iconSvg(Resvg, { bg: '#000', letter: '#fff' }, { size: 84 });
+const badge = svgDoc(
+  `<mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="96" height="96">${maskBody}</mask>` +
+    `<rect width="96" height="96" fill="#fff" mask="url(#m)"/>`,
+);
+writeFileSync(out('icons/badge-96x96.png'), png(badge, 96));
 console.log('Icons rendered.');

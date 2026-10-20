@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
           title: message.title,
           body: message.body,
           icon: '/icons/icon-192x192.png',
-          badge: '/icons/icon-96x96.png',
+          badge: '/icons/badge-96x96.png',
           tag: message.key,
           renotify: true,
           vibrate: [200, 100, 200],
