@@ -1,59 +1,72 @@
-# PopperCup
+# P0PPER CUP
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.3.
+Tournament manager for 2v2 football video game nights: one console, a living room full of
+friends, and a phone in everyone's pocket.
 
-## Development server
+The admin runs the night from their phone — pairs drawn with a prize wheel, results entered as
+matches finish — while everybody else follows the live table, the bracket and what's next on
+their own phones or on the TV.
 
-To start a local development server, run:
+## Features
 
-```bash
-ng serve
+- **Pairs draw with a wheel.** Every club appears twice; the second time a club comes out, a pair
+  is formed. With an odd number of players one club comes out once and its owner plays solo.
+- **Group stage on a single console.** Round-robin ordered so no team plays two matches in a row
+  and everybody stays within one match of each other.
+- **Live standings** with tiebreakers chosen and ordered when the tournament is set up
+  (goal difference, goals for, head-to-head, wins, drawing of lots…).
+- **Playoff and bracket as the house rules want them.** Top two go straight to the semis, 3rd–6th
+  play a playoff where the 3rd picks their opponent and the 4th picks the order; the group winner
+  picks their semi-final opponent. Extra time and penalties in knockout matches.
+- **Solo player support.** Before each of their matches the solo player gets a partner drawn from
+  whoever isn't playing; for the knockout stage they draw a fixed partner from eliminated players.
+  Injuries mid-tournament turn the partner into a solo player automatically.
+- **Optional goal scorers** and a top scorers table.
+- **TV mode** with the current match, standings and upcoming fixtures in big type.
+- **Estimated finish time** from minutes per half and changeover time per phase.
+- **Realtime sync** across devices; anyone with the code can watch, only the admin PIN can write.
+- **Demo mode** that runs entirely in the browser.
+
+## Stack
+
+- **Angular 22** — standalone components, signals, zoneless change detection, lazy routes.
+- **Tailwind CSS 4** with a custom design system (tokens in `src/styles.css`): condensed italic
+  display type, clipped corners and slanted buttons.
+- **Supabase** — Postgres + Realtime. No custom backend: the tournament is a JSON document read
+  through RLS and written only through `security definer` functions that check a bcrypt-hashed PIN
+  and an expected version (optimistic concurrency).
+- **Vitest** for unit and component tests. Deployed on **Vercel**.
+
+## Architecture
+
+```
+src/app/
+  domain/      Pure TypeScript tournament engine: scheduling, standings, knockout, draws.
+               No Angular, fully deterministic with a seeded RNG, covered by tests.
+  data/        Repository abstraction with a browser (localStorage) and a Supabase
+               implementation, plus the per-tournament session (signals + optimistic saves).
+  pages/       Routed screens: setup, wheel, matches, table, bracket, scorers, TV.
+  ui/          Shared presentational components (wheel, match card, standings table…).
+supabase/
+  migrations/  Schema, row level security and RPCs.
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Every change is a pure function `(tournament) => tournament` from `domain/tournament.ts`. The
+session applies it optimistically, saves it with the version it was based on, and rolls back or
+reloads if the save is rejected. Other devices receive the new document through Realtime.
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Running locally
 
 ```bash
-ng generate --help
+npm install
+npm start
 ```
 
-## Building
-
-To build the project run:
+Without backend settings the app stores tournaments in the browser, which is enough to try it
+out. To sync between devices, create a Supabase project, run
+`supabase/migrations/0001_init.sql` and fill in the URL and publishable key in
+`src/app/config.ts`.
 
 ```bash
-ng build
+npm test
 ```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.

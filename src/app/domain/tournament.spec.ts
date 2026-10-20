@@ -9,6 +9,7 @@ import {
   createTournament,
   currentDecision,
   DEFAULT_CONFIG,
+  disqualify,
   estimatedRemainingMinutes,
   finishDraw,
   isSolo,
@@ -239,6 +240,21 @@ describe('full tournament', () => {
     expect(t.stage).toBe('finished');
     t = { ...t, stage: 'knockout', matches: t.matches.map((m) => (m.phase === 'final' ? { ...m, status: 'pending' } : m)) };
     expect(() => recordResult(t, 'final', { homeGoals: 1, awayGoals: 1 })).toThrow(TournamentError);
+  });
+
+  it('turns the partner of an injured player into a solo player who gets stand-ins', () => {
+    const rng = seededRng(5);
+    let t = drawAll(newTournament(12), rng);
+    const injured = t.teams[0].memberIds[0];
+    t = disqualify(t, injured);
+    expect(isSolo(t, t.teams[0].id)).toBe(true);
+    t = playThrough(t, rng);
+    expect(t.stage).toBe('finished');
+    for (const m of t.matches) {
+      const players = [...lineup(t, m, m.homeId), ...lineup(t, m, m.awayId)];
+      expect(players).not.toContain(injured);
+      expect(new Set(players).size).toBe(4);
+    }
   });
 
   it('rejects participant counts outside the supported range', () => {
