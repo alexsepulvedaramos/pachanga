@@ -7,29 +7,31 @@ import { standings } from '../domain/tournament';
 type Zone = 'direct' | 'playoff' | 'out';
 
 const ZONE_STYLES: Record<Zone, string> = {
-  direct: 'border-volt',
-  playoff: 'border-cyan',
-  out: 'border-flare',
+  direct: 'border-l-volt',
+  playoff: 'border-l-cyan',
+  out: 'border-l-flare',
 };
 
 @Component({
   selector: 'app-standings-table',
   template: `
-    <div class="overflow-x-auto">
-      <table class="w-full min-w-[22rem] border-collapse font-display" [class]="big() ? 'text-2xl' : 'text-base'">
+    <!-- On phones the table scrolls sideways; position and team stay pinned on the left. -->
+    <div class="no-scrollbar -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+      <table class="w-full border-collapse font-display" [class]="big() ? 'text-2xl' : 'min-w-[34rem] text-base'">
         <thead>
           <tr class="eyebrow text-mist">
-            <th class="w-10 py-2 text-left font-bold">#</th>
-            <th class="py-2 text-left font-bold">Equipo</th>
-            <th class="w-10 text-center font-bold">PJ</th>
+            <th class="sticky left-0 z-10 w-10 bg-ink py-2 pl-4 text-left font-bold">#</th>
+            <th class="sticky left-10 z-10 bg-ink py-2 text-left font-bold">Equipo</th>
+            <th class="w-10 text-center font-bold" title="Partidos jugados">PJ</th>
             @if (!big()) {
-              <th class="hidden w-10 text-center font-bold sm:table-cell">G</th>
-              <th class="hidden w-10 text-center font-bold sm:table-cell">E</th>
-              <th class="hidden w-10 text-center font-bold sm:table-cell">P</th>
-              <th class="hidden w-14 text-center font-bold sm:table-cell">Goles</th>
+              <th class="w-9 text-center font-bold" title="Ganados">G</th>
+              <th class="w-9 text-center font-bold" title="Empatados">E</th>
+              <th class="w-9 text-center font-bold" title="Perdidos">P</th>
             }
-            <th class="w-12 text-center font-bold">DG</th>
-            <th class="w-12 text-right font-bold">Pts</th>
+            <th class="w-10 text-center font-bold" title="Goles a favor">GF</th>
+            <th class="w-10 text-center font-bold" title="Goles en contra">GC</th>
+            <th class="w-12 text-center font-bold" title="Diferencia de goles">DG</th>
+            <th class="w-12 pr-3 text-right font-bold">Pts</th>
             @if (!big()) {
               <th class="hidden w-28 pl-4 text-left font-bold md:table-cell">Forma</th>
             }
@@ -37,12 +39,12 @@ const ZONE_STYLES: Record<Zone, string> = {
         </thead>
         <tbody>
           @for (row of rows(); track row.teamId; let i = $index) {
-            <tr class="border-l-4 bg-pitch [&>td]:border-b-4 [&>td]:border-ink" [class]="zoneStyles[row.zone]">
-              <td class="py-2.5 pl-3 font-extrabold italic">{{ i + 1 }}</td>
-              <td class="py-2.5">
+            <tr class="[&>td]:border-b-4 [&>td]:border-ink [&>td]:bg-pitch">
+              <td class="sticky left-0 z-10 w-10 border-l-4 py-2.5 pl-3 font-extrabold italic" [class]="zoneStyles[row.zone]">{{ i + 1 }}</td>
+              <td class="sticky left-10 z-10 py-2.5 pr-3 shadow-[6px_0_8px_-6px_rgba(0,0,0,0.6)]">
                 <div class="flex items-center gap-2.5">
-                  <span class="h-6 w-1" [style.background]="row.color"></span>
-                  <div class="min-w-0">
+                  <span class="h-6 w-1 shrink-0" [style.background]="row.color"></span>
+                  <div class="min-w-0 max-w-[9rem] sm:max-w-none">
                     <p class="truncate font-extrabold uppercase italic leading-tight">{{ row.club }}</p>
                     @if (!big()) {
                       <p class="truncate font-sans text-xs text-mist">{{ row.members }}</p>
@@ -52,11 +54,12 @@ const ZONE_STYLES: Record<Zone, string> = {
               </td>
               <td class="text-center text-mist">{{ row.played }}</td>
               @if (!big()) {
-                <td class="hidden text-center sm:table-cell">{{ row.won }}</td>
-                <td class="hidden text-center sm:table-cell">{{ row.drawn }}</td>
-                <td class="hidden text-center sm:table-cell">{{ row.lost }}</td>
-                <td class="hidden text-center text-mist sm:table-cell">{{ row.goalsFor }}:{{ row.goalsAgainst }}</td>
+                <td class="text-center">{{ row.won }}</td>
+                <td class="text-center">{{ row.drawn }}</td>
+                <td class="text-center">{{ row.lost }}</td>
               }
+              <td class="text-center">{{ row.goalsFor }}</td>
+              <td class="text-center text-mist">{{ row.goalsAgainst }}</td>
               <td class="text-center" [class.text-volt]="row.goalDifference > 0" [class.text-flare]="row.goalDifference < 0">
                 {{ row.goalDifference > 0 ? '+' : '' }}{{ row.goalDifference }}
               </td>
