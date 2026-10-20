@@ -57,6 +57,12 @@
 @utility slant-sm {
   clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
 }
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
 @utility heading {
   font-family: var(--font-display);
   font-weight: 800;

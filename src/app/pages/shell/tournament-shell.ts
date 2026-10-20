@@ -67,7 +67,7 @@ import { StageBadge } from '../../ui/stage-badge';
           </form>
         }
 
-        <nav class="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 pb-0 pt-3" aria-label="Secciones">
+        <nav class="no-scrollbar mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 pb-0 pt-3" aria-label="Secciones">
           @for (tab of tabs(); track tab.path) {
             <a
               [routerLink]="tab.path"
@@ -77,7 +77,7 @@ import { StageBadge } from '../../ui/stage-badge';
               {{ tab.label }}
             </a>
           }
-          <span class="ml-auto self-center pb-2"><app-stage-badge [stage]="t.stage" /></span>
+          <span class="ml-auto hidden self-center pb-2 sm:inline"><app-stage-badge [stage]="t.stage" /></span>
         </nav>
       </header>
 

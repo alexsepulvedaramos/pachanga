@@ -100,7 +100,8 @@ export class Wheel {
         color: clubColor(this.clubs(), club),
         labelX: lx,
         labelY: ly,
-        labelAngle: mid - 90,
+        // Labels run along the radius; flip the left half so they never read upside down.
+        labelAngle: mid > 180 ? mid + 90 : mid - 90,
       };
     });
   });

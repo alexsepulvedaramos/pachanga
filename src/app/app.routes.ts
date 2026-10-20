@@ -1,7 +1,11 @@
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
-  { path: '', loadComponent: () => import('./pages/home/home-page').then((m) => m.HomePage) },
+  {
+    path: '',
+    title: 'P0PPER CUP',
+    loadComponent: () => import('./pages/home/home-page').then((m) => m.HomePage),
+  },
   {
     path: 'nuevo',
     title: 'Nuevo torneo · P0PPER CUP',
@@ -9,10 +13,12 @@ export const routes: Routes = [
   },
   {
     path: 't/:id/tv',
+    title: 'Modo TV · P0PPER CUP',
     loadComponent: () => import('./pages/tv/tv-page').then((m) => m.TvPage),
   },
   {
     path: 't/:id',
+    title: 'P0PPER CUP',
     loadComponent: () => import('./pages/shell/tournament-shell').then((m) => m.TournamentShell),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'partidos' },

@@ -39,9 +39,20 @@ interface Reveal {
               }
             </div>
 
-            <div class="mt-6">
-              <app-wheel #wheel [entries]="displayEntries()" [clubs]="t.clubs" (landed)="landed()" />
-            </div>
+            @if (spinner()) {
+              <div class="mt-6">
+                <app-wheel #wheel [entries]="displayEntries()" [clubs]="t.clubs" (landed)="landed()" />
+              </div>
+            } @else if (solo(); as s) {
+              <div class="panel mx-auto mt-6 max-w-md text-center" [style.border-top]="'4px solid ' + color(t, s.club)">
+                <p class="eyebrow text-gold">Jugador suelto</p>
+                <p class="heading mt-1 text-4xl">{{ s.name }} · <span [style.color]="color(t, s.club)">{{ s.club }}</span></p>
+                <p class="mt-2 text-sm text-mist">
+                  En cada partido se le sortea un compañero entre los que no juegan. En semis, uno fijo de
+                  entre los eliminados.
+                </p>
+              </div>
+            }
 
             @if (session.isAdmin()) {
               <div class="mt-6 flex flex-wrap justify-center gap-3">
@@ -190,6 +201,14 @@ export class DrawPage {
       club,
       names: ids.map((id) => this.session.personName(id)),
     }));
+  });
+
+  /** With an odd number of players, whoever ended up alone on a club once the draw is over. */
+  protected readonly solo = computed(() => {
+    const t = this.session.tournament();
+    if (!t || nextToSpin(t)) return null;
+    const lone = [...drawnPairs(t)].find(([, ids]) => ids.length === 1);
+    return lone ? { club: lone[0], name: this.session.personName(lone[1][0]) } : null;
   });
 
   protected color(t: Tournament, club: string): string {
