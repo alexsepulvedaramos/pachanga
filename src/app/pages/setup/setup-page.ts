@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { RematchDraft } from '../../domain/rematch';
 import { Brand } from '../../ui/brand';
 import { TournamentStore } from '../../data/tournament-store';
 import { newTournamentCode } from '../../data/tournament-repository';
@@ -276,6 +277,21 @@ export class SetupPage {
   protected readonly pin = signal('');
   protected readonly creating = signal(false);
   protected readonly picking = signal(false);
+
+  constructor() {
+    // "Revancha" from a finished tournament comes with everything filled in.
+    const draft = (history.state as { rematch?: RematchDraft } | null)?.rematch;
+    if (draft) {
+      this.name.set(draft.name);
+      this.players.set(draft.playerNames);
+      this.clubs.set(draft.clubs);
+      this.tiebreakers.set(draft.config.tiebreakers);
+      this.trackScorers.set(draft.config.trackScorers);
+      this.ballonDor.set(!!draft.config.ballonDor);
+      this.minuteOverrides.set(draft.config.halfMinutes);
+      this.changeover.set(draft.config.changeoverMinutes);
+    }
+  }
 
   protected readonly teamCount = computed(() => teamCountFor(this.players().length));
   protected readonly minutes = computed<HalfMinutes>(() => ({

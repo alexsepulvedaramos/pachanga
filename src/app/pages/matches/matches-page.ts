@@ -1,7 +1,7 @@
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { ToastService } from '../../ui/toast.service';
 import { MyTurnPanel } from '../../ui/my-turn';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TournamentSession } from '../../data/tournament-session';
 import { MatchCard } from '../../ui/match-card';
 import { DecisionPanel } from '../../ui/decision-panel';
@@ -25,6 +25,7 @@ import {
 import { formatClock, formatDuration } from '../../ui/format';
 import { BallonDorPanel } from '../gala/ballon-dor-panel';
 import { ClubCrest } from '../../ui/club-crest';
+import { rematchDraft } from '../../domain/rematch';
 
 @Component({
   selector: 'app-matches-page',
@@ -68,6 +69,10 @@ import { ClubCrest } from '../../ui/club-crest';
             <p class="mt-1 font-display text-2xl font-bold uppercase">{{ championNames() }}</p>
           </section>
           <app-ballon-dor-panel />
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-3 bg-pitch px-4 py-3">
+            <p class="text-sm text-mist">¿Otra? Mismos jugadores, clubs y reglas, con sorteo nuevo.</p>
+            <button type="button" class="btn-secondary" (click)="rematch()">Revancha</button>
+          </div>
         }
 
         <div class="mt-6"><app-decision-panel /></div>
@@ -188,6 +193,7 @@ export class MatchesPage {
   private readonly now = signal(Date.now());
 
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
 
   constructor() {
     const timer = setInterval(() => this.now.set(Date.now()), 30_000);
@@ -279,6 +285,12 @@ export class MatchesPage {
   protected toggleSummary(m: Match): void {
     if (m.status !== 'done') return;
     this.expanded.update((id) => (id === m.id ? null : m.id));
+  }
+
+  /** A new tournament with the same people, clubs and rules, to be set up and drawn again. */
+  protected rematch(): void {
+    const t = this.session.tournament();
+    if (t) void this.router.navigate(['/nuevo'], { state: { rematch: rematchDraft(t) } });
   }
 
   /** Opens the result form for a finished match if nothing depends on it yet. */
