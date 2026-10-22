@@ -191,7 +191,7 @@ interface Reveal {
         </div>
       } @else {
         <h1 class="heading text-4xl">Parejas</h1>
-        <ul class="mt-6 grid gap-3 sm:grid-cols-2">
+        <ul class="mt-6 grid items-start gap-3 sm:grid-cols-2">
           @for (team of t.teams; track team.id) {
             <li class="cut flex flex-wrap items-center gap-x-4 bg-pitch py-3 pl-0 pr-4">
               <span class="h-14 w-2" [style.background]="color(t, team.club)"></span>

@@ -26,6 +26,11 @@ describe('TournamentStore', () => {
     expect(store.isOwner(second.id)).toBe(true);
   });
 
+  it('explains, when a demo is opened on another device, that demos stay in their browser', async () => {
+    const store = TestBed.inject(TournamentStore);
+    await expect(store.load('DEMOABCD')).rejects.toThrow('solo existen en el navegador');
+  });
+
   it('clears demos left behind by earlier versions', () => {
     localStorage.setItem('pachanga:tournament:DEMOABCD', '{}');
     localStorage.setItem('pachanga:pin:DEMOABCD', '0000');

@@ -16,7 +16,9 @@ import { LeagueRecapViewer } from '../league/league-recap-viewer';
 import { ChoiceMoment } from '../choice/choice-moment';
 import { ChoiceMomentViewer } from '../choice/choice-moment-viewer';
 import { QrCode } from '../../ui/qr-code';
+import { Icon } from '../../ui/icon';
 import { tournamentUrl } from '../../domain/share-text';
+import { DEMO_PREFIX } from '../../data/tournament-repository';
 
 /**
  * Big-screen view: current match, table and what comes next, updating live. Made to be left
@@ -25,21 +27,28 @@ import { tournamentUrl } from '../../domain/share-text';
  */
 @Component({
   selector: 'app-tv-page',
-  imports: [Brand, MatchCard, StandingsTable, DecisionPanel, RouterLink, Gala, LeagueRecap, ChoiceMoment, QrCode],
+  imports: [Brand, MatchCard, StandingsTable, DecisionPanel, RouterLink, Gala, LeagueRecap, ChoiceMoment, QrCode, Icon],
   providers: [TournamentSession, GalaViewer, LeagueRecapViewer, ChoiceMomentViewer],
   template: `
     @if (session.tournament(); as t) {
       <div class="flex min-h-dvh flex-col gap-6 p-6 lg:p-10">
         <header class="flex items-center justify-between gap-6">
-          <a [routerLink]="['/t', t.id]" class="shrink-0"><app-brand size="md" /></a>
-          <p class="heading min-w-0 truncate text-3xl text-mist">{{ t.name }}</p>
           <div class="flex shrink-0 items-center gap-4">
-            <div class="text-right">
-              <p class="eyebrow text-mist">Síguelo en el móvil</p>
-              <p class="font-display text-3xl font-bold tracking-[0.3em]">{{ t.id }}</p>
-            </div>
-            <app-qr-code class="size-24" [value]="joinUrl()" [label]="'QR para abrir ' + t.name" />
+            <a [routerLink]="['/t', t.id, 'partidos']" class="btn-secondary gap-2 px-4 py-2 text-sm"><app-icon name="back" /> Volver</a>
+            <app-brand size="md" />
           </div>
+          <p class="heading min-w-0 truncate text-3xl text-mist">{{ t.name }}</p>
+          @if (isDemo()) {
+            <p class="max-w-xs shrink-0 text-right text-sm text-mist">Demo: solo existe en este navegador, así que no se puede seguir desde el móvil.</p>
+          } @else {
+            <div class="flex shrink-0 items-center gap-4">
+              <div class="text-right">
+                <p class="eyebrow text-mist">Síguelo en el móvil</p>
+                <p class="font-display text-3xl font-bold tracking-[0.3em]">{{ t.id }}</p>
+              </div>
+              <app-qr-code class="size-24" [value]="joinUrl()" [label]="'QR para abrir ' + t.name" />
+            </div>
+          }
         </header>
 
         @if (t.stage === 'finished') {
@@ -129,6 +138,9 @@ export class TvPage {
     const t = this.session.tournament();
     return !!t && votingOpen(t);
   });
+
+  /** Demos live in this browser only: there is nothing for a phone to open. */
+  protected readonly isDemo = computed(() => this.id().toUpperCase().startsWith(DEMO_PREFIX));
 
   protected readonly joinUrl = computed(() => {
     const t = this.session.tournament();
