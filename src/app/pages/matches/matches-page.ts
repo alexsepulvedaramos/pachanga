@@ -1,7 +1,7 @@
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { ToastService } from '../../ui/toast.service';
 import { MyTurnPanel } from '../../ui/my-turn';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TournamentSession } from '../../data/tournament-session';
 import { MatchCard } from '../../ui/match-card';
 import { DecisionPanel } from '../../ui/decision-panel';
@@ -23,10 +23,13 @@ import {
   totalMatchCount,
 } from '../../domain/tournament';
 import { formatClock, formatDuration } from '../../ui/format';
+import { BallonDorPanel } from '../gala/ballon-dor-panel';
+import { ClubCrest } from '../../ui/club-crest';
+import { rematchDraft } from '../../domain/rematch';
 
 @Component({
   selector: 'app-matches-page',
-  imports: [MatchCard, DecisionPanel, ResultForm, MatchSummary, Modal, RouterLink, MyTurnPanel],
+  imports: [MatchCard, DecisionPanel, ResultForm, MatchSummary, Modal, RouterLink, MyTurnPanel, BallonDorPanel, ClubCrest],
   template: `
     @if (session.tournament(); as t) {
       @if (t.stage === 'draw') {
@@ -65,6 +68,11 @@ import { formatClock, formatDuration } from '../../ui/format';
             <p class="heading mt-1 text-6xl">{{ championClub() }}</p>
             <p class="mt-1 font-display text-2xl font-bold uppercase">{{ championNames() }}</p>
           </section>
+          <app-ballon-dor-panel />
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-3 bg-pitch px-4 py-3">
+            <p class="text-sm text-mist">¿Otra? Mismos jugadores, clubs y reglas, con sorteo nuevo.</p>
+            <button type="button" class="btn-secondary" (click)="rematch()">Revancha</button>
+          </div>
         }
 
         <div class="mt-6"><app-decision-panel /></div>
@@ -77,7 +85,7 @@ import { formatClock, formatDuration } from '../../ui/format';
                 {{ phaseLabel(m) }} · {{ m.halfMinutes }} min/parte
               </p>
               @if (m.status === 'live') {
-                <span class="tag animate-pulse-live bg-flare text-ink">En juego</span>
+                <span class="tag bg-flare text-ink"><span class="mr-1.5 inline-block size-1.5 animate-pulse-live bg-ink align-middle"></span>En juego</span>
               } @else {
                 <span class="tag bg-line text-mist">Siguiente</span>
               }
@@ -104,6 +112,18 @@ import { formatClock, formatDuration } from '../../ui/format';
                   <p class="mt-3 text-center text-sm text-mist">Al empezar se sortea el invitado del jugador suelto.</p>
                 }
               }
+            } @else if (m.status === 'live' && iPlay(m)) {
+              <div class="mt-6 flex flex-col items-center gap-2">
+                <button type="button" class="btn-primary px-10 text-lg" (click)="editing.set(m.id)">Meter resultado</button>
+                <p class="text-center text-xs text-mist">Lo puede meter cualquiera de los que jugáis; el admin lo corrige si hace falta.</p>
+              </div>
+            } @else if (m.status === 'pending' && iPlay(m)) {
+              <div class="mt-6 flex flex-col items-center gap-2">
+                <button type="button" class="btn-primary px-10 text-lg" [disabled]="session.saving()" (click)="session.startAsPlayer(m.id)">
+                  Empezar partido
+                </button>
+                <p class="text-center text-xs text-mist">Os toca: cualquiera de los que jugáis puede darle.</p>
+              </div>
             }
           </section>
         }
@@ -111,9 +131,17 @@ import { formatClock, formatDuration } from '../../ui/format';
         <!-- Fixture -->
         @for (group of fixture(); track group.phase) {
           <section class="mt-8">
-            <h2 class="eyebrow text-mist">{{ group.label }}</h2>
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="eyebrow text-mist">{{ group.label }}</h2>
+              @if (group.folded) {
+                <button type="button" class="eyebrow text-cyan hover:text-chalk" [attr.aria-expanded]="isOpen(group.phase)" (click)="toggleFold(group.phase)">
+                  {{ isOpen(group.phase) ? 'Ocultar jugados' : 'Ver ' + group.folded + (group.folded === 1 ? ' jugado' : ' jugados') }}
+                </button>
+              }
+            </div>
             <ol class="mt-2 divide-y divide-line/60">
               @for (row of group.rows; track row.match.id) {
+                @if (!row.foldable || isOpen(group.phase)) {
                 <li>
                   <div
                     class="grid grid-cols-[2rem_1fr_auto_1fr_2rem] items-center gap-2 border-l-4 py-2.5 pl-1"
@@ -127,7 +155,10 @@ import { formatClock, formatDuration } from '../../ui/format';
                     (keydown.enter)="toggleSummary(row.match)"
                   >
                     <span class="font-display text-sm font-bold text-mist">{{ row.number }}</span>
-                    <span class="truncate text-right font-display text-lg font-bold uppercase" [class.text-volt]="row.winner === row.match.homeId">{{ session.teamName(row.match.homeId) }}</span>
+                    <span class="flex min-w-0 items-center justify-end gap-1.5 font-display text-base font-bold uppercase sm:gap-2 sm:text-lg" [class.text-volt]="row.winner === row.match.homeId">
+                      <span class="truncate">{{ session.teamName(row.match.homeId) }}</span>
+                      <app-club-crest [club]="session.teamName(row.match.homeId)" size="1.2rem" />
+                    </span>
                     <span class="heading min-w-16 bg-raised px-2 py-0.5 text-center text-xl tabular-nums" [class.text-flare]="row.match.status === 'live'">
                       @if (row.match.status === 'done') {
                         <span [class.text-volt]="row.winner === row.match.homeId">{{ row.match.homeGoals }}</span><span class="text-mist">–</span><span [class.text-volt]="row.winner === row.match.awayId">{{ row.match.awayGoals }}</span>
@@ -137,10 +168,11 @@ import { formatClock, formatDuration } from '../../ui/format';
                         –
                       }
                     </span>
-                    <span class="truncate font-display text-lg font-bold uppercase" [class.text-volt]="row.winner === row.match.awayId">
-                      {{ session.teamName(row.match.awayId) }}
+                    <span class="flex min-w-0 items-center gap-1.5 font-display text-base font-bold uppercase sm:gap-2 sm:text-lg" [class.text-volt]="row.winner === row.match.awayId">
+                      <app-club-crest [club]="session.teamName(row.match.awayId)" size="1.2rem" />
+                      <span class="truncate">{{ session.teamName(row.match.awayId) }}</span>
                       @if (row.match.incidents?.length) {
-                        <span class="ml-1 inline-block h-3 w-2 bg-flare align-middle" [attr.title]="row.match.incidents!.length + ' sanción(es)'"></span>
+                        <span class="ml-1 inline-block h-3 w-2 shrink-0 bg-flare align-middle" [attr.title]="row.match.incidents!.length + ' sanción(es)'"></span>
                       }
                     </span>
                     @if (session.isAdmin() && row.match.status === 'done') {
@@ -151,6 +183,7 @@ import { formatClock, formatDuration } from '../../ui/format';
                     <app-match-summary [match]="row.match" />
                   }
                 </li>
+                }
               }
             </ol>
           </section>
@@ -163,7 +196,7 @@ import { formatClock, formatDuration } from '../../ui/format';
           [heading]="session.teamName(em.homeId) + ' vs ' + session.teamName(em.awayId)"
           (closed)="editing.set(null)"
         >
-          <app-result-form [match]="em" (saved)="editing.set(null)" (cancelled)="editing.set(null)" />
+          <app-result-form [match]="em" [asPlayer]="!session.isAdmin()" (saved)="editing.set(null)" (cancelled)="editing.set(null)" />
         </app-modal>
       }
     }
@@ -174,6 +207,8 @@ export class MatchesPage {
   protected readonly editing = signal<Id | null>(null);
   /** Finished match whose summary is open. */
   protected readonly expanded = signal<Id | null>(null);
+  /** Phases whose played matches are shown in full. */
+  private readonly unfolded = signal<ReadonlySet<Phase>>(new Set());
   protected readonly editingMatch = computed(() => {
     const id = this.editing();
     return id ? (this.session.tournament()?.matches.find((m) => m.id === id) ?? null) : null;
@@ -181,6 +216,7 @@ export class MatchesPage {
   private readonly now = signal(Date.now());
 
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
 
   constructor() {
     const timer = setInterval(() => this.now.set(Date.now()), 30_000);
@@ -216,18 +252,25 @@ export class MatchesPage {
     const order: Phase[] = ['group', 'playoff', 'quarter', 'semi', 'third', 'final'];
     let number = 0;
     const me = this.session.me();
+    // Played matches fold away while the tournament goes on, all but the latest result.
+    const latest = t.stage === 'finished' ? null : [...t.matches].reverse().find((m) => m.status === 'done');
     const numbered = t.matches.map((match) => ({
       match,
       number: ++number,
       winner: this.winner(match),
       mine: !!me && playsIn(t, match, me),
+      foldable: !!latest && match.status === 'done' && match.id !== latest.id,
     }));
     return order
-      .map((phase) => ({
-        phase,
-        label: phase === 'group' ? 'Liguilla' : PHASE_LABELS[phase],
-        rows: numbered.filter((r) => r.match.phase === phase),
-      }))
+      .map((phase) => {
+        const rows = numbered.filter((r) => r.match.phase === phase);
+        return {
+          phase,
+          label: phase === 'group' ? 'Liguilla' : PHASE_LABELS[phase],
+          rows,
+          folded: rows.filter((r) => r.foldable).length,
+        };
+      })
       .filter((g) => g.rows.length > 0);
   });
 
@@ -252,6 +295,13 @@ export class MatchesPage {
     return PHASE_LABELS[m.phase];
   }
 
+  /** Whether the person using this phone plays in a match. */
+  protected iPlay(m: Match): boolean {
+    const t = this.session.tournament();
+    const me = this.session.me();
+    return !!t && !!me && playsIn(t, m, me);
+  }
+
   protected soloTeams(m: Match): Id[] {
     const t = this.session.tournament()!;
     return [m.homeId, m.awayId].filter((id) => isSolo(t, id) && !!m.standIns?.[id]);
@@ -269,9 +319,27 @@ export class MatchesPage {
     await this.session.apply((t, rng) => redrawStandIn(t, matchId, teamId, rng));
   }
 
+  protected isOpen(phase: Phase): boolean {
+    return this.unfolded().has(phase);
+  }
+
+  protected toggleFold(phase: Phase): void {
+    this.unfolded.update((open) => {
+      const next = new Set(open);
+      if (!next.delete(phase)) next.add(phase);
+      return next;
+    });
+  }
+
   protected toggleSummary(m: Match): void {
     if (m.status !== 'done') return;
     this.expanded.update((id) => (id === m.id ? null : m.id));
+  }
+
+  /** A new tournament with the same people, clubs and rules, to be set up and drawn again. */
+  protected rematch(): void {
+    const t = this.session.tournament();
+    if (t) void this.router.navigate(['/nuevo'], { state: { rematch: rematchDraft(t) } });
   }
 
   /** Opens the result form for a finished match if nothing depends on it yet. */

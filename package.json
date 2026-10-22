@@ -6,9 +6,10 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
+    "test": "npm run build:functions && ng test",
     "update:clubs": "node --no-warnings scripts/update-club-ratings.ts",
-    "build:notify": "esbuild supabase/functions/notify/messages.ts --bundle --format=esm --platform=neutral --outfile=supabase/functions/notify/domain.js"
+    "e2e": "playwright test",
+    "build:functions": "esbuild supabase/functions/notify/messages.ts --bundle --format=esm --platform=neutral --outfile=supabase/functions/notify/domain.js && esbuild supabase/functions/submit-result/rules.ts --bundle --format=esm --platform=neutral --outfile=supabase/functions/submit-result/domain.js"
   },
   "private": true,
   "packageManager": "npm@11.11.0",
@@ -23,6 +24,7 @@
     "@supabase/supabase-js": "^2.118.0",
     "@tailwindcss/postcss": "^4.3.3",
     "postcss": "^8.5.31",
+    "qrcode-generator": "^1.4.4",
     "rxjs": "~7.8.0",
     "tailwindcss": "^4.3.3",
     "tslib": "^2.3.0"
@@ -31,6 +33,7 @@
     "@angular/build": "^22.2.3",
     "@angular/cli": "^22.2.3",
     "@angular/compiler-cli": "^22.2.0",
+    "@playwright/test": "^1.56.1",
     "@resvg/resvg-js": "^2.6.2",
     "esbuild": "^0.28.2",
     "jsdom": "^30.0.0",

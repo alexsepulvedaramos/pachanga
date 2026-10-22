@@ -4,52 +4,21 @@ import { ToastService } from './toast.service';
 import { PushNotifications } from '../data/push-notifications';
 import { myTurn, MyTurn } from '../domain/tournament';
 import { formatClock, formatDuration } from './format';
-import { Modal } from './modal';
+import { ConfirmService } from './confirm.service';
+import { changeName } from './identity-gate';
 
-/** "Who are you?" picker, then where that person stands: playing now, how long until they play… */
+/** Where the person using this phone stands: playing now, how long until they play… */
 @Component({
   selector: 'app-my-turn',
-  imports: [Modal],
   template: `
     @if (session.tournament(); as t) {
-      @if (pickerOpen()) {
-        <app-modal eyebrow="Para ver tus partidos" heading="¿Quién eres?" (closed)="closePicker()">
-          <p class="mb-4 text-sm text-mist">
-            Tus partidos salen destacados, ves cuánto falta para que te toque y puedes activar los avisos.
-          </p>
-          <div class="flex flex-wrap gap-1.5">
-            @for (p of t.participants; track p.id) {
-              <button
-                type="button"
-                class="tag px-4 py-2 text-base"
-                [class]="session.me() === p.id ? 'bg-volt text-ink' : 'bg-line text-chalk hover:bg-raised'"
-                (click)="choose(p.id)"
-              >
-                {{ p.name }}
-              </button>
-            }
-          </div>
-        </app-modal>
-      }
-
       @if (!session.me()) {
-        <section class="cut-sm bg-pitch p-4">
-          <p class="eyebrow text-cyan">¿Quién eres?</p>
-          <p class="mt-1 text-sm text-mist">Elige tu nombre para ver tus partidos destacados y cuándo te toca.</p>
-          <div class="mt-3">
-          <div class="flex flex-wrap gap-1.5">
-            @for (p of t.participants; track p.id) {
-              <button
-                type="button"
-                class="tag px-3 py-1.5 text-sm"
-                [class]="session.me() === p.id ? 'bg-volt text-ink' : 'bg-line text-chalk hover:bg-raised'"
-                (click)="choose(p.id)"
-              >
-                {{ p.name }}
-              </button>
-            }
+        <section class="cut-sm flex items-center gap-4 bg-pitch p-4">
+          <div class="min-w-0 flex-1">
+            <p class="eyebrow text-cyan">Invitado</p>
+            <p class="mt-1 text-sm text-mist">Si juegas, elige tu nombre para ver cuándo te toca y recibir avisos.</p>
           </div>
-          </div>
+          <button type="button" class="tag shrink-0 bg-line text-chalk hover:bg-raised" (click)="session.setGuest(false)">Soy jugador</button>
         </section>
       } @else if (turn(); as turn) {
         <section
@@ -89,7 +58,7 @@ import { Modal } from './modal';
             type="button"
             class="tag shrink-0"
             [class]="turn.kind === 'now' ? 'bg-ink text-chalk' : 'bg-line text-mist hover:text-chalk'"
-            (click)="choosing.set(true)"
+            (click)="change()"
           >
             Cambiar
           </button>
@@ -126,17 +95,7 @@ export class MyTurnPanel {
   protected readonly session = inject(TournamentSession);
   private readonly toast = inject(ToastService);
   private readonly push = inject(PushNotifications);
-  protected readonly choosing = signal(false);
-  /** Closed without picking: the picker stays on the page instead of popping up again. */
-  private readonly dismissed = signal(false);
-  protected readonly pickerOpen = computed(
-    () => this.choosing() || (!this.session.me() && !this.dismissed()),
-  );
-
-  protected closePicker(): void {
-    this.choosing.set(false);
-    this.dismissed.set(true);
-  }
+  private readonly confirm = inject(ConfirmService);
 
   protected readonly turn = computed<MyTurn | null>(() => {
     const t = this.session.tournament();
@@ -202,11 +161,8 @@ export class MyTurnPanel {
     }
   }
 
-  protected choose(participantId: string): void {
-    this.session.setMe(participantId);
-    this.choosing.set(false);
-    const t = this.session.tournament();
-    if (t) void this.push.follow(t.id, participantId).catch((e) => this.toast.error(e));
+  protected change(): Promise<void> {
+    return changeName(this.session, this.confirm, this.push);
   }
 
   protected duration(minutes: number): string {

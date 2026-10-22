@@ -41,11 +41,14 @@ import { lineup } from '../../domain/tournament';
       @if (empty()) {
         <p class="mt-2 text-xs text-mist">Sin goleadores ni sanciones apuntados.</p>
       }
+      @if (match().reportedBy; as who) {
+        <p class="mt-2 text-xs text-mist">Resultado metido por {{ session.personName(who) }}.</p>
+      }
     </div>
   `,
 })
 export class MatchSummary {
-  private readonly session = inject(TournamentSession);
+  protected readonly session = inject(TournamentSession);
   readonly match = input.required<Match>();
 
   protected readonly sides = computed(() => {

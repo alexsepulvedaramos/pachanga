@@ -22,6 +22,8 @@ import {
   isSolo,
   moveMember,
   renameClub,
+  reportResult,
+  playerStartMatch,
   swapMembers,
   lineup,
   makeChoice,
@@ -498,5 +500,59 @@ describe('editing pairs', () => {
     const t = ready(12);
     const live = startMatch(t, nextMatch(t)!.id, seededRng(1));
     expect(() => swapMembers(live, t.teams[0].memberIds[0], t.teams[1].memberIds[0])).toThrow(TournamentError);
+  });
+});
+
+describe('results entered by players', () => {
+  const live = () => {
+    const rng = seededRng(4);
+    const t = drawAll(newTournament(8, 4), rng);
+    const m = nextMatch(t)!;
+    return { t: startMatch(t, m.id, rng), m };
+  };
+
+  it('lets a player of the live match enter its result, and says who did', () => {
+    const { t, m } = live();
+    const player = lineup(t, m, m.homeId)[0];
+    const next = reportResult(t, player, m.id, { homeGoals: 2, awayGoals: 0 });
+    const done = next.matches.find((x) => x.id === m.id)!;
+    expect(done).toMatchObject({ status: 'done', homeGoals: 2, awayGoals: 0, reportedBy: player });
+  });
+
+  it("refuses someone who isn't playing, a match not started and one already in", () => {
+    const { t, m } = live();
+    const outsider = t.participants.find((p) => !playsIn(t, m, p.id))!.id;
+    const player = lineup(t, m, m.awayId)[0];
+    expect(() => reportResult(t, outsider, m.id, { homeGoals: 1, awayGoals: 0 })).toThrow(TournamentError);
+    const later = t.matches.find((x) => x.status === 'pending')!;
+    const laterPlayer = lineup(t, later, later.homeId)[0];
+    expect(() => reportResult(t, laterPlayer, later.id, { homeGoals: 1, awayGoals: 0 })).toThrow('aún no ha empezado');
+    const done = reportResult(t, player, m.id, { homeGoals: 1, awayGoals: 1 });
+    expect(() => reportResult(done, player, m.id, { homeGoals: 3, awayGoals: 1 })).toThrow('ya tiene resultado');
+  });
+
+  it("forgets who entered it when the admin corrects the result", () => {
+    const { t, m } = live();
+    const player = lineup(t, m, m.homeId)[0];
+    const reported = reportResult(t, player, m.id, { homeGoals: 2, awayGoals: 0 });
+    const corrected = recordResult(reported, m.id, { homeGoals: 2, awayGoals: 1 });
+    expect(corrected.matches.find((x) => x.id === m.id)!.reportedBy).toBeUndefined();
+  });
+});
+
+describe('matches started by players', () => {
+  it('lets a player start the match that is up, and nobody else', () => {
+    const rng = seededRng(5);
+    const t = drawAll(newTournament(8, 5), rng);
+    const up = nextMatch(t)!;
+    const player = lineup(t, up, up.awayId)[0];
+    const outsider = t.participants.find((p) => !playsIn(t, up, p.id))!.id;
+    expect(() => playerStartMatch(t, outsider, up.id, rng)).toThrow('Solo pueden empezarlo');
+    const later = t.matches.find((m) => m.id !== up.id && playsIn(t, m, player))!;
+    expect(() => playerStartMatch(t, player, later.id, rng)).toThrow('aún no toca');
+
+    const started = playerStartMatch(t, player, up.id, rng);
+    expect(started.matches.find((m) => m.id === up.id)!.status).toBe('live');
+    expect(playerStartMatch(started, player, up.id, rng)).toBe(started);
   });
 });

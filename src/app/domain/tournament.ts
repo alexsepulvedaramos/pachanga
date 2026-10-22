@@ -385,9 +385,42 @@ export function recordResult(t: Tournament, matchId: Id, result: MatchResult): T
     awayPens: knockout && level ? result.awayPens : null,
     goals: t.config.trackScorers ? (result.goals ?? []) : undefined,
     incidents: result.incidents?.length ? result.incidents : undefined,
+    reportedBy: undefined,
   };
   const next = replaceMatch(t, updated);
   return sync({ ...next, liveMatchId: t.liveMatchId === matchId ? undefined : t.liveMatchId });
+}
+
+/**
+ * A player of the match that's up starts it from their phone (drawing any stand-in), so the
+ * night doesn't wait on the admin.
+ */
+export function playerStartMatch(t: Tournament, participantId: Id, matchId: Id, rng: Rng): Tournament {
+  const m = match(t, matchId);
+  if (m.status === 'live') return t;
+  if (t.matches.some((x) => x.status === 'live')) throw new TournamentError('Ya hay un partido en juego.');
+  if (nextMatch(t)?.id !== matchId) throw new TournamentError('Ese partido aún no toca.');
+  if (!playsIn(t, m, participantId)) {
+    throw new TournamentError('Solo pueden empezarlo los que juegan el partido.');
+  }
+  return startMatch(t, matchId, rng);
+}
+
+/**
+ * A player of the match enters its result from their phone. Only while it is being played, and
+ * only once: a result already in is the admin's to correct.
+ */
+export function reportResult(t: Tournament, participantId: Id, matchId: Id, result: MatchResult): Tournament {
+  const m = match(t, matchId);
+  if (m.status === 'done') {
+    throw new TournamentError('Ese partido ya tiene resultado. Si está mal, que lo corrija el admin.');
+  }
+  if (m.status !== 'live') throw new TournamentError('El partido aún no ha empezado.');
+  if (!playsIn(t, m, participantId)) {
+    throw new TournamentError('Solo pueden meter el resultado los que juegan el partido.');
+  }
+  const next = recordResult(t, matchId, result);
+  return replaceMatch(next, { ...match(next, matchId), reportedBy: participantId });
 }
 
 function validateResult(t: Tournament, m: Match, r: MatchResult): void {

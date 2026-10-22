@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { RematchDraft } from '../../domain/rematch';
 import { Brand } from '../../ui/brand';
 import { TournamentStore } from '../../data/tournament-store';
 import { newTournamentCode } from '../../data/tournament-repository';
@@ -172,9 +173,21 @@ const CLUB_SUGGESTIONS = [
           </span>
           <input
             type="checkbox"
-            class="size-6 accent-volt"
+            class="size-6 shrink-0 accent-volt"
             [checked]="trackScorers()"
             (change)="trackScorers.set($any($event.target).checked)"
+          />
+        </label>
+        <label class="panel mt-3 flex cursor-pointer items-center justify-between gap-4">
+          <span>
+            <span class="block font-display text-lg font-bold uppercase">Balón de Oro</span>
+            <span class="text-sm text-mist">Al acabar la final, cada jugador vota su podio (3, 2 y 1 puntos) y se entrega en la gala.</span>
+          </span>
+          <input
+            type="checkbox"
+            class="size-6 shrink-0 accent-volt"
+            [checked]="ballonDor()"
+            (change)="ballonDor.set($any($event.target).checked)"
           />
         </label>
         <div class="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
@@ -257,12 +270,28 @@ export class SetupPage {
   protected readonly clubs = signal<string[]>([]);
   protected readonly tiebreakers = signal<TiebreakCriterion[]>([...DEFAULT_CONFIG.tiebreakers]);
   protected readonly trackScorers = signal(false);
+  protected readonly ballonDor = signal(false);
   /** Minutes per half changed by hand; the rest follow the defaults for the number of teams. */
   private readonly minuteOverrides = signal<Partial<HalfMinutes>>({});
   protected readonly changeover = signal(DEFAULT_CONFIG.changeoverMinutes);
   protected readonly pin = signal('');
   protected readonly creating = signal(false);
   protected readonly picking = signal(false);
+
+  constructor() {
+    // "Revancha" from a finished tournament comes with everything filled in.
+    const draft = (history.state as { rematch?: RematchDraft } | null)?.rematch;
+    if (draft) {
+      this.name.set(draft.name);
+      this.players.set(draft.playerNames);
+      this.clubs.set(draft.clubs);
+      this.tiebreakers.set(draft.config.tiebreakers);
+      this.trackScorers.set(draft.config.trackScorers);
+      this.ballonDor.set(!!draft.config.ballonDor);
+      this.minuteOverrides.set(draft.config.halfMinutes);
+      this.changeover.set(draft.config.changeoverMinutes);
+    }
+  }
 
   protected readonly teamCount = computed(() => teamCountFor(this.players().length));
   protected readonly minutes = computed<HalfMinutes>(() => ({
@@ -386,6 +415,7 @@ export class SetupPage {
         config: {
           tiebreakers: this.tiebreakers(),
           trackScorers: this.trackScorers(),
+          ballonDor: this.ballonDor(),
           halfMinutes: this.minutes(),
           changeoverMinutes: this.changeover(),
           seed: randomSeed(),

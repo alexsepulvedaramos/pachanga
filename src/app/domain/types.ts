@@ -54,6 +54,8 @@ export interface Match {
   standIns?: Record<Id, Id>;
   goals?: Goal[];
   incidents?: Incident[];
+  /** Player who entered the result from their phone; missing when the admin did. */
+  reportedBy?: Id;
 }
 
 export type TiebreakCriterion =
@@ -83,6 +85,8 @@ export interface TournamentConfig {
   changeoverMinutes: number;
   /** Seed used for the drawing of lots tiebreaker and other deterministic draws. */
   seed: number;
+  /** Players vote a Ballon d'Or podium when the tournament ends. Missing in older tournaments. */
+  ballonDor?: boolean;
 }
 
 export type Stage = 'setup' | 'draw' | 'groups' | 'knockout' | 'finished';
@@ -121,4 +125,31 @@ export interface Tournament {
   groupRanking?: Id[];
   /** Id of the match currently being played, if any. */
   liveMatchId?: Id;
+  /** Names a phone has taken, written by the server: nobody else can pick them. */
+  claimed?: Id[];
+  /** Ballon d'Or vote, written by the server as players vote. */
+  ballonDor?: BallonDorState;
+  /** Closing ceremony shown live on every screen, driven by the admin. */
+  gala?: GalaState;
+}
+
+/** A voter's podium: first (3 points), second (2) and third (1). */
+export interface BallonDorVote {
+  voterId: Id;
+  picks: Id[];
+}
+
+export interface BallonDorState {
+  /** Who has voted so far. Who they voted for stays secret until the vote closes. */
+  voters: Id[];
+  /** Every ballot, published when the vote closes. */
+  votes?: BallonDorVote[];
+  closedAt?: string;
+}
+
+export interface GalaState {
+  /** When the admin started it; a new start makes every screen join again. */
+  startedAt: string;
+  /** Slide on screen; past the last slide the gala is over. */
+  step: number;
 }

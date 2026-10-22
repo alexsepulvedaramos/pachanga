@@ -17,7 +17,26 @@ jobs:
       - run: npm ci
       - run: npx ng test --watch=false
       - run: npm run build
-      - name: Notification bundle is up to date with the domain code
+      - name: Edge Function bundles are up to date with the domain code
         run: |
-          npm run build:notify
-          git diff --exit-code supabase/functions/notify/domain.js
+          npm run build:functions
+          git diff --exit-code supabase/functions/*/domain.js
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - name: Keep the report of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7

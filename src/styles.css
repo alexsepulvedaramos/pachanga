@@ -20,6 +20,12 @@
   --animate-drop: drop 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-pulse-live: pulse-live 1.4s ease-in-out infinite;
   --animate-flash: flash 0.9s ease-out both;
+  --animate-pop: pop 0.7s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  --animate-flip-in: flip-in 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  --animate-slam: slam 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-suspense: suspense 1.1s ease-in-out infinite;
+  --animate-shine: shine 2.4s linear infinite;
+  --animate-story: story linear both;
 
   @keyframes rise {
     from {
@@ -44,6 +50,60 @@
   @keyframes pulse-live {
     50% {
       opacity: 0.35;
+    }
+  }
+  @keyframes pop {
+    0% {
+      opacity: 0;
+      transform: scale(0.4) rotate(-8deg);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes flip-in {
+    from {
+      opacity: 0;
+      transform: perspective(800px) rotateX(85deg) translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes slam {
+    0% {
+      opacity: 0;
+      transform: scale(2.4);
+      filter: blur(6px);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+      filter: none;
+    }
+  }
+  @keyframes suspense {
+    50% {
+      transform: scale(1.12);
+      filter: drop-shadow(0 0 28px var(--color-gold));
+    }
+  }
+  @keyframes shine {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+  @keyframes story {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
     }
   }
   @keyframes flash {
@@ -78,6 +138,14 @@
 @utility slant-sm {
   clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
 }
+/* Gold lettering with a light sweeping across it. */
+@utility gold-text {
+  background: linear-gradient(100deg, #ffb703 0%, #fff3c4 20%, #ffc83d 40%, #ffb703 60%, #fff3c4 80%, #ffc83d 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 @utility no-scrollbar {
   scrollbar-width: none;
   &::-webkit-scrollbar {
@@ -98,6 +166,21 @@
   font-size: 0.75rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
+}
+
+/* TV mode sizes everything to the screen: ~17px on a 1080p TV, never under 12px on a tablet. */
+html.tv-screen {
+  font-size: clamp(12px, min(0.9vw, 1.6vh), 22px);
+}
+
+/* Room the phone tab bar takes at the bottom, for anything else fixed there. */
+html.has-bottom-nav {
+  --bottom-nav: 4.25rem;
+}
+@media (min-width: 40rem) {
+  html.has-bottom-nav {
+    --bottom-nav: 0px;
+  }
 }
 
 @layer base {
@@ -150,4 +233,11 @@
 }
 @utility tag {
   @apply slant-sm inline-block px-2.5 py-0.5 font-display text-xs font-bold uppercase tracking-wider;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-suspense,
+  .animate-shine {
+    animation: none;
+  }
 }

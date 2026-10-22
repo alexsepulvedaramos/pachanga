@@ -9,6 +9,10 @@ const STAGES: Record<Stage, { label: string; tone: string }> = {
   finished: { label: 'Terminado', tone: 'bg-volt text-ink' },
 };
 
+export function stageLabel(stage: Stage): string {
+  return STAGES[stage].label;
+}
+
 @Component({
   selector: 'app-stage-badge',
   template: `<span class="tag" [class]="info().tone">{{ info().label }}</span>`,

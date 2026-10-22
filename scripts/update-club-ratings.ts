@@ -9,6 +9,7 @@
 // once, which is what EA switching the feed to the next game would look like. When that happens,
 // run it again with the new edition id to start a new file instead.
 
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import {
   rateClub,
@@ -35,6 +36,7 @@ const indexFile = new URL('index.json', DIR);
 interface ApiTeam {
   id: number;
   label: string;
+  imageUrl?: string;
 }
 interface ApiPlayer {
   overallRating: number;
@@ -58,6 +60,8 @@ const filters = await get<{ teamGroups: { label: string; teams: ApiTeam[] }[] }>
 const teams = filters.teamGroups
   .filter((g) => LEAGUES.includes(g.label))
   .flatMap((g) => g.teams.map((team) => ({ ...team, league: g.label })));
+
+await updateCrests(teams);
 
 const clubs: ClubRating[] = [];
 const squads: ClubSquadsFile['clubs'] = [];
@@ -130,3 +134,39 @@ const entry: EditionIndexEntry = {
 const nextIndex = [entry, ...index.filter((e) => e.id !== editionId)].sort((a, b) => b.id.localeCompare(a.id));
 writeFileSync(indexFile, JSON.stringify(nextIndex, null, 2) + '\n');
 console.log(`${edition}: wrote ${clubs.length} clubs.`);
+
+/**
+ * Keeps a copy of every club's crest in public/data/clubs/crests/<EA team id>.png, plus
+ * crests.json with the club names, so the app never depends on EA being up during a tournament.
+ * A crest that fails to download keeps its previous copy.
+ */
+async function updateCrests(list: ApiTeam[]): Promise<void> {
+  const dir = new URL('crests/', DIR);
+  mkdirSync(dir, { recursive: true });
+  const saved: { id: number; name: string }[] = [];
+  let changed = 0;
+  for (const team of list) {
+    const file = new URL(`${team.id}.png`, dir);
+    try {
+      if (!team.imageUrl) throw new Error('no crest in the feed');
+      const res = await fetch(team.imageUrl);
+      if (!res.ok || !res.headers.get('content-type')?.startsWith('image/png')) throw new Error(`${res.status}`);
+      const png = Buffer.from(await res.arrayBuffer());
+      const old = existsSync(file) ? readFileSync(file) : null;
+      if (!old || hash(old) !== hash(png)) {
+        writeFileSync(file, png);
+        changed++;
+      }
+    } catch (error) {
+      console.warn(`Crest of ${team.label}: ${(error as Error).message}`);
+    }
+    if (existsSync(file)) saved.push({ id: team.id, name: team.label });
+  }
+  saved.sort((a, b) => a.name.localeCompare(b.name));
+  writeFileSync(new URL('crests.json', DIR), JSON.stringify(saved) + '\n');
+  console.log(`Crests: ${saved.length} of ${list.length} clubs, ${changed} new or changed.`);
+}
+
+function hash(data: Buffer): string {
+  return createHash('sha256').update(data).digest('hex');
+}

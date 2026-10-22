@@ -36,17 +36,39 @@ their own phones or on the TV.
 - **Balanced club picker.** Pick a target rating and get clubs from the big five leagues as close
   to it as possible, or browse them: each club shows its estimated rating, attack/midfield/defence,
   stars and best starting XI on a pitch. Ratings are labelled with the game edition they belong to.
+- **Players start their match and enter its result too.** Any player of the match that's up can
+  start it, and while it's being played any of its players can enter the result, from the phone
+  holding their name; a Supabase Edge Function checks that phone's token and
+  applies it with the app's own rules (bundled like the notifications). The match then shows who
+  entered it, and the admin can still correct it.
 - **Optional goal scorers** and a top scorers table.
-- **Your matches.** Each phone can say who is holding it: that player's matches are highlighted and
-  a panel says whether it's their turn, how many matches until theirs and roughly at what time.
+- **Ballon d'Or** (optional): when the final ends every player votes a podium (3, 2 and 1 points,
+  never themselves) from their phone. Ballots stay secret in their own table; the vote closes when
+  everybody has voted or the admin closes it. A ballot is cast by the phone holding that name, and
+  the admin can delete one.
+- **Closing gala**, full screen and story-style: how the night went, the champions, the Golden Boot
+  and the Ballon d'Or from third to first, with a drumroll before each name. The admin starts it
+  and moves through it from their phone while every phone and the TV follow along; anyone can
+  replay it afterwards, and share the whole night as one story-sized picture (numbers, champions,
+  Golden Boot and Ballon d'Or podium) through the phone's share sheet.
+- **Your matches.** Opening a tournament asks who you are; each name belongs to one phone (tied to
+  a random token kept on it), so nobody can take someone else's name, and anyone else follows as
+  a guest. A name picked by mistake is let go from that phone (deleting the Ballon d'Or ballot cast
+  under it, if wanted) or freed by the admin. That player's matches are highlighted and a panel
+  says whether it's their turn, how many matches until theirs and roughly at what time.
 - **Push notifications.** Players can ask to be told when it's their turn, when they're up next,
   when they have to pick an opponent and who won. A database trigger calls a Supabase Edge
   Function on every change; it reuses the app's own domain code (bundled with esbuild) to work out
   who to notify and records what it sent so nothing is repeated.
+- **Rematch.** A finished tournament sets up the next one with the same players, clubs and rules.
 - **Share to the group chat.** The tournament link goes to WhatsApp, the phone's share sheet or the
   clipboard: offered right after creating the tournament, from the code in the header, and with the
   standings as text.
-- **TV mode** with the current match, standings and upcoming fixtures in big type.
+- **TV mode** with the current match, standings and upcoming fixtures in big type. It scales to
+  the screen, so a laptop or tablet next to the console works as a scoreboard while the TV is busy
+  with the game, keeps that screen awake, and shows a QR code to open the tournament on a phone.
+- **Tidy fixture list.** Played matches fold away while the tournament goes on, all but the latest
+  result, with a button to show them.
 - **Installable** as a PWA (manifest, maskable icons, service worker), with an install banner that
   uses the browser prompt on Android/desktop and explains Add to Home Screen on iOS.
 - **Estimated finish time** from minutes per half and changeover time per phase.
@@ -90,6 +112,10 @@ reads the public feed behind [ea.com/games/ea-sports-fc/ratings](https://www.ea.
 for every club in the big five leagues, finds each club's best XI across 4-3-3, 4-2-3-1, 4-4-2 and
 3-5-2, and averages it, which is how the game rates a team from its starting XI. The result is a
 static file per game edition in `public/data/clubs/`, with an index of the editions available.
+The same run keeps a copy of every club's crest in `public/data/clubs/crests/` (named by EA's
+team id, listed in `crests.json`, about 2.6 MB for the 96 clubs), so tournaments never depend on
+EA's servers. A club typed by hand or outside the big five gets a shield in its colour with its
+initials.
 
 - Estimates can differ by a point or two from the game, where each club uses its real coach's
   formation and lineup. The star rating is an approximation calibrated against published stars.
@@ -104,6 +130,8 @@ static file per game edition in `public/data/clubs/`, with an index of the editi
 
 Where the rulebook leaves room for interpretation, the app does this:
 
+- **Ballon d'Or ties:** more first places, then more second places, then more goals, then how far
+  their team got, then the drawing of lots.
 - **Solo player in the playoff:** nobody is eliminated yet, so they get a drawn stand-in per match,
   as in the group stage. The fixed partner from the eliminated players is drawn for the semis.
 - **Group winner's pick:** the 1st can choose any of the other semi-finalists, the 2nd included.
@@ -129,10 +157,11 @@ npm start
 ```
 
 Without backend settings the app stores tournaments in the browser, which is enough to try it
-out. To sync between devices, create a Supabase project, run
-`supabase/migrations/0001_init.sql` and fill in the URL and publishable key in
+out. To sync between devices, create a Supabase project, run the files in
+`supabase/migrations/` in order and fill in the URL and publishable key in
 `src/app/config.ts`.
 
 ```bash
-npm test
+npm test        # unit tests (also rebuilds the notification bundle)
+npm run e2e     # whole flows in a phone-sized Chromium: names, a match, the vote, the gala, a rematch
 ```

@@ -70,6 +70,11 @@ function winnerOf(match) {
   if (home === null || away === null || home === away) return null;
   return home > away ? match.homeId : match.awayId;
 }
+function loserOf(match) {
+  const winner = winnerOf(match);
+  if (!winner) return null;
+  return winner === match.homeId ? match.awayId : match.homeId;
+}
 function byPhase(matches, phase) {
   return matches.filter((m) => m.phase === phase);
 }
@@ -110,6 +115,35 @@ function pendingDecision(ranking, choices, matches) {
     }
   }
   return null;
+}
+function podium(matches) {
+  const final = matches.find((m) => m.phase === "final");
+  const third = matches.find((m) => m.phase === "third");
+  if (!final || !winnerOf(final)) return null;
+  const top = [winnerOf(final), loserOf(final)];
+  if (third) return winnerOf(third) ? [...top, winnerOf(third), loserOf(third)] : null;
+  const semi = matches.find((m) => m.phase === "semi");
+  return semi && loserOf(semi) ? [...top, loserOf(semi)] : null;
+}
+
+// src/app/domain/rng.ts
+function seededRng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = a + 1831565813 >>> 0;
+    let t = a;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function shuffle(items, rng) {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
 }
 
 // src/app/domain/tournament.ts
@@ -163,6 +197,97 @@ function champions(t) {
   if (!final || !winner) return null;
   return lineup(t, final, winner);
 }
+function topScorers(t) {
+  const counts = /* @__PURE__ */ new Map();
+  for (const m of t.matches) {
+    for (const g of m.goals ?? []) {
+      if (g.scorerId) counts.set(g.scorerId, (counts.get(g.scorerId) ?? 0) + 1);
+    }
+  }
+  return [...counts].map(([participantId, goals]) => ({ participantId, goals })).sort((a, b) => b.goals - a.goals);
+}
+
+// src/app/domain/ballon-dor.ts
+var PODIUM_POINTS = [3, 2, 1];
+function hasBallonDor(t) {
+  return !!t.config.ballonDor;
+}
+function votingOpen(t) {
+  return hasBallonDor(t) && t.stage === "finished" && !t.ballonDor?.closedAt;
+}
+function votingClosed(t) {
+  return hasBallonDor(t) && !!t.ballonDor?.closedAt;
+}
+function ballonDorRanking(t) {
+  const rows = /* @__PURE__ */ new Map();
+  for (const vote of t.ballonDor?.votes ?? []) {
+    vote.picks.forEach((id, place) => {
+      const row = rows.get(id) ?? { participantId: id, points: 0, places: [0, 0, 0] };
+      row.points += PODIUM_POINTS[place] ?? 0;
+      row.places[place]++;
+      rows.set(id, row);
+    });
+  }
+  const goals = new Map(topScorers(t).map((s) => [s.participantId, s.goals]));
+  const teams = finalTeamOrder(t);
+  const teamPosition = (id) => {
+    const index = teams.findIndex((teamId) => t.teams.find((x) => x.id === teamId)?.memberIds.includes(id));
+    return index < 0 ? teams.length : index;
+  };
+  const lots = shuffle(t.participants.map((p) => p.id).sort(), seededRng(t.config.seed ^ 47633));
+  return [...rows.values()].sort(
+    (a, b) => b.points - a.points || b.places[0] - a.places[0] || b.places[1] - a.places[1] || (goals.get(b.participantId) ?? 0) - (goals.get(a.participantId) ?? 0) || teamPosition(a.participantId) - teamPosition(b.participantId) || lots.indexOf(a.participantId) - lots.indexOf(b.participantId)
+  );
+}
+function finalTeamOrder(t) {
+  const top = podium(t.matches) ?? [];
+  const rest = (t.groupRanking ?? t.teams.map((x) => x.id)).filter((id) => !top.includes(id));
+  return [...top, ...rest];
+}
+
+// src/app/domain/gala.ts
+function galaSlides(t) {
+  if (t.stage !== "finished") return [];
+  const played = t.matches.filter((m) => m.status === "done");
+  const goals = played.reduce((sum, m) => sum + (m.homeGoals ?? 0) + (m.awayGoals ?? 0), 0);
+  const margin = (m) => Math.abs((m.homeGoals ?? 0) - (m.awayGoals ?? 0));
+  const biggestWin = played.reduce(
+    (best, m) => margin(m) > 0 && (!best || margin(m) > margin(best) || margin(m) === margin(best) && goalsIn(m) > goalsIn(best)) ? m : best,
+    null
+  );
+  const slides = [{ kind: "intro", matches: played.length, goals, biggestWin }];
+  const final = t.matches.find((m) => m.phase === "final");
+  const winner = final && winnerOf(final);
+  if (final && winner) slides.push({ kind: "champions", teamId: winner, playerIds: champions(t) ?? [], final });
+  const scorers = topScorers(t);
+  if (t.config.trackScorers && scorers.length) {
+    const most = scorers[0].goals;
+    slides.push({
+      kind: "goldenBoot",
+      participantIds: scorers.filter((s) => s.goals === most).map((s) => s.participantId),
+      goals: most
+    });
+  }
+  if (votingClosed(t)) {
+    const podium2 = ballonDorRanking(t).slice(0, 3);
+    for (let i = podium2.length - 1; i >= 0; i--) {
+      const row = podium2[i];
+      slides.push({
+        kind: "ballonDor",
+        place: i + 1,
+        participantId: row.participantId,
+        points: row.points,
+        firsts: row.places[0],
+        ballots: row.places[0] + row.places[1] + row.places[2]
+      });
+    }
+  }
+  return slides;
+}
+var goalsIn = (m) => (m.homeGoals ?? 0) + (m.awayGoals ?? 0);
+function galaLive(t) {
+  return !!t.gala && t.gala.step < galaSlides(t).length;
+}
 
 // supabase/functions/notify/messages.ts
 var club = (t, teamId) => t.teams.find((x) => x.id === teamId)?.club ?? "";
@@ -176,15 +301,33 @@ function buildMessages(t) {
     const final = t.matches.find((m) => m.phase === "final");
     const winners = champions(t) ?? [];
     if (!final || winners.length === 0) return [];
+    const everybody = t.participants.map((p) => p.id);
     const winnerTeam = t.teams.find((x) => winners.some((id) => x.memberIds.includes(id)));
-    return [
+    const messages2 = [
       {
         key: "champions",
-        participantIds: t.participants.map((p) => p.id),
+        participantIds: everybody,
         title: `Campeones: ${winnerTeam?.club ?? ""}`,
         body: `${winners.map((id) => name(t, id)).join(" + ")} ganan ${t.name}.`
       }
     ];
+    if (votingOpen(t)) {
+      messages2.push({
+        key: "vote",
+        participantIds: everybody.filter((id) => !t.ballonDor?.voters.includes(id)),
+        title: "Vota al Bal\xF3n de Oro",
+        body: `Elige tu podio de ${t.name}: 3, 2 y 1 puntos.`
+      });
+    }
+    if (t.gala && galaLive(t)) {
+      messages2.push({
+        key: `gala:${t.gala.startedAt}`,
+        participantIds: everybody,
+        title: "\xA1Empieza la gala!",
+        body: "Abre Pachanga: campeones, Bota de Oro y Bal\xF3n de Oro, en directo."
+      });
+    }
+    return messages2;
   }
   if (t.stage !== "groups" && t.stage !== "knockout") return [];
   const messages = [];

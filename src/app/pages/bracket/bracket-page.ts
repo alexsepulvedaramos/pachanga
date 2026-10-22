@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { TournamentSession } from '../../data/tournament-session';
 import { DecisionPanel } from '../../ui/decision-panel';
 import { clubColor } from '../../ui/club-colors';
+import { ClubCrest } from '../../ui/club-crest';
 import { Id, Match, Phase } from '../../domain/types';
 import { knockoutFormat, QUARTER_SEEDS, winnerOf } from '../../domain/knockout';
 
@@ -14,7 +15,7 @@ interface Slot {
 
 @Component({
   selector: 'app-bracket-page',
-  imports: [DecisionPanel],
+  imports: [DecisionPanel, ClubCrest],
   template: `
     @if (session.tournament(); as t) {
       <h1 class="heading text-4xl">Cuadro</h1>
@@ -36,7 +37,7 @@ interface Slot {
                   @if (slot.rows; as rows) {
                     @for (row of rows; track $index) {
                       <div class="flex items-center gap-2 px-3 py-2" [class.text-mist]="!row.won && rows[0].score !== ''">
-                        <span class="h-5 w-1" [style.background]="row.color"></span>
+                        <app-club-crest [club]="row.name" [color]="row.color" size="1.5rem" />
                         <span class="flex-1 truncate font-display text-lg font-extrabold uppercase italic" [class.text-volt]="row.won">{{ row.name }}</span>
                         <span class="heading text-2xl tabular-nums">{{ row.score }}</span>
                       </div>
