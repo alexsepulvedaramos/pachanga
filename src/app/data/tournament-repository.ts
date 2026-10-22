@@ -1,4 +1,4 @@
-import { Tournament } from '../domain/types';
+import { KnockoutChoices, Tournament } from '../domain/types';
 import { MatchResult } from '../domain/tournament';
 
 export interface StoredTournament {
@@ -88,6 +88,9 @@ export abstract class TournamentRepository {
   abstract startMatch(id: string, participantId: string, token: string, matchId: string): Promise<void>;
 
   abstract reportResult(id: string, participantId: string, token: string, matchId: string, result: MatchResult): Promise<void>;
+
+  /** A player of the team whose turn it is makes the pending knockout choice from their phone. */
+  abstract makeChoice(id: string, participantId: string, token: string, choice: Partial<KnockoutChoices>): Promise<void>;
 
   /**
    * Casts or changes a participant's Ballon d'Or podium. The first ballot is tied to `token`, kept

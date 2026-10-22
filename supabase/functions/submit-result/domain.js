@@ -217,6 +217,29 @@ function semiFinalists(ranking, matches) {
   const direct = ranking.slice(0, format.direct);
   return [...direct, ...ranking.filter((id) => winners.has(id))];
 }
+function pendingDecision(ranking, choices, matches) {
+  const pool = playoffTeams(ranking);
+  if (pool.length === 4 && byPhase(matches, "playoff").length === 0) {
+    const [chooser, orderChooser] = pool;
+    if (!choices.playoffOpponentId) {
+      return { kind: "playoffOpponent", chooserId: chooser, options: pool.slice(1) };
+    }
+    if (choices.playoffChooserFirst === void 0) {
+      return { kind: "playoffOrder", chooserId: orderChooser };
+    }
+  }
+  const semis = knockoutFormat(ranking.length).choices ? semiFinalists(ranking, matches) : null;
+  if (semis && byPhase(matches, "semi").length === 0) {
+    const [chooser, orderChooser] = semis;
+    if (!choices.semiOpponentId) {
+      return { kind: "semiOpponent", chooserId: chooser, options: semis.slice(1) };
+    }
+    if (choices.semiChooserFirst === void 0) {
+      return { kind: "semiOrder", chooserId: orderChooser };
+    }
+  }
+  return null;
+}
 function nextKnockoutMatches(ranking, choices, matches) {
   const format = knockoutFormat(ranking.length);
   const seed = (position) => ranking[position - 1];
@@ -456,6 +479,39 @@ function standings(t) {
     t.config.seed
   );
 }
+function currentDecision(t) {
+  if (t.stage !== "knockout" || !t.groupRanking) return null;
+  return pendingDecision(t.groupRanking, t.knockout, t.matches);
+}
+function makeChoice(t, choice) {
+  const decision = currentDecision(t);
+  if (!decision) throw new TournamentError("No hay ninguna elecci\xF3n pendiente.");
+  const allowed = {
+    playoffOpponent: "playoffOpponentId",
+    playoffOrder: "playoffChooserFirst",
+    semiOpponent: "semiOpponentId",
+    semiOrder: "semiChooserFirst"
+  };
+  const key = allowed[decision.kind];
+  const value = choice[key];
+  if (value === void 0) throw new TournamentError("Esa elecci\xF3n no toca ahora.");
+  if ((decision.kind === "playoffOpponent" || decision.kind === "semiOpponent") && !decision.options.includes(value)) {
+    throw new TournamentError("Ese rival no se puede elegir.");
+  }
+  return sync({ ...t, knockout: { ...t.knockout, [key]: value } });
+}
+function choosers(t, teamId) {
+  const partner = team(t, teamId).knockoutPartnerId;
+  return [...activeMembers(t, teamId), ...partner ? [partner] : []];
+}
+function playerMakeChoice(t, participantId, choice) {
+  const decision = currentDecision(t);
+  if (!decision) throw new TournamentError("No hay ninguna elecci\xF3n pendiente.");
+  if (!choosers(t, decision.chooserId).includes(participantId)) {
+    throw new TournamentError("Esta elecci\xF3n le toca a otro equipo.");
+  }
+  return makeChoice(t, choice);
+}
 function sync(t) {
   let next = t;
   const groups = groupMatches(next);
@@ -492,6 +548,7 @@ function drawKnockoutPartners(t) {
   return { ...t, teams };
 }
 export {
+  playerMakeChoice,
   playerStartMatch,
   reportResult
 };

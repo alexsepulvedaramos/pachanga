@@ -1,5 +1,5 @@
 import { computed, DestroyRef, Injectable, inject, signal } from '@angular/core';
-import { Id, Tournament } from '../domain/types';
+import { Id, KnockoutChoices, Tournament } from '../domain/types';
 import { Rng } from '../domain/rng';
 import { TournamentStore } from './tournament-store';
 import {
@@ -10,7 +10,7 @@ import {
   WrongPinError,
 } from './tournament-repository';
 import { validateVote } from '../domain/ballon-dor';
-import { MatchResult, playerStartMatch, reportResult } from '../domain/tournament';
+import { MatchResult, playerMakeChoice, playerStartMatch, reportResult } from '../domain/tournament';
 import { ToastService } from '../ui/toast.service';
 
 /** Saves retried on top of someone else's change before giving up. */
@@ -264,6 +264,14 @@ export class TournamentSession {
     return this.asPlayer(
       (t, me) => reportResult(t, me, matchId, result),
       (repo, id, me, token) => repo.reportResult(id, me, token, matchId, result),
+    );
+  }
+
+  /** The person using this phone makes their team's pending knockout choice. */
+  chooseAsPlayer(choice: Partial<KnockoutChoices>): Promise<boolean> {
+    return this.asPlayer(
+      (t, me) => playerMakeChoice(t, me, choice),
+      (repo, id, me, token) => repo.makeChoice(id, me, token, choice),
     );
   }
 

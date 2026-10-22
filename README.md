@@ -46,6 +46,10 @@ their own phones or on the TV.
   never themselves) from their phone. Ballots stay secret in their own table; the vote closes when
   everybody has voted or the admin closes it. A ballot is cast by the phone holding that name, and
   the admin can delete one.
+- **Moment to choose.** When a team has to pick its knockout rival (or whether its match goes
+  first), every screen shows it full screen: the TV and the other phones wait with that team while
+  its players choose from their own phones (the admin can choose for them), then every screen
+  reveals the pick. It also works from the panel on the matches page.
 - **Group stage recap.** When the last group match is entered, every screen shows a short
   story-style break: the final table revealed from the bottom up with where each team goes, the
   stage in numbers (best attack and defence, biggest win, top scorer) and the knockout ties or the

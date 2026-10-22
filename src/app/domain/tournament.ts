@@ -611,6 +611,22 @@ export function makeChoice(t: Tournament, choice: Partial<KnockoutChoices>): Tou
   return sync({ ...t, knockout: { ...t.knockout, [key]: value } });
 }
 
+/** The players who make a team's knockout choices: its active members and any knockout partner. */
+export function choosers(t: Tournament, teamId: Id): Id[] {
+  const partner = team(t, teamId).knockoutPartnerId;
+  return [...activeMembers(t, teamId), ...(partner ? [partner] : [])];
+}
+
+/** A player of the team whose turn it is makes the pending knockout choice from their phone. */
+export function playerMakeChoice(t: Tournament, participantId: Id, choice: Partial<KnockoutChoices>): Tournament {
+  const decision = currentDecision(t);
+  if (!decision) throw new TournamentError('No hay ninguna elección pendiente.');
+  if (!choosers(t, decision.chooserId).includes(participantId)) {
+    throw new TournamentError('Esta elección le toca a otro equipo.');
+  }
+  return makeChoice(t, choice);
+}
+
 /**
  * Moves the tournament forward after any change: closes the group stage, creates the knockout
  * matches that are ready and draws the fixed knockout partner of a solo team.

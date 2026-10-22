@@ -20,15 +20,18 @@ import type { Tournament, TournamentConfig } from '../src/app/domain/types';
 export const PIN = '0000';
 export const PLAYERS = ['Ana', 'Bea', 'Carla', 'Dani', 'Eva', 'Fer'];
 const CLUBS = ['Real Madrid', 'Man City', 'Bayern'];
+const MORE_CLUBS = ['PSG', 'Inter', 'Liverpool', 'Barcelona', 'Arsenal'];
+/** Twelve players: six teams, so the knockout starts with a playoff and choices. */
+export const TWELVE = [...PLAYERS, 'Gael', 'Hugo', 'Iris', 'Juan', 'Kike', 'Lola'];
 
 /** Demo ids live in the tab's session storage. */
-export function newTournament(id: string, config: Partial<TournamentConfig> = {}): Tournament {
+export function newTournament(id: string, config: Partial<TournamentConfig> = {}, players = PLAYERS): Tournament {
   const rng = seededRng(5);
   let t = createTournament({
     id,
     name: 'Pachanga E2E',
-    participantNames: PLAYERS,
-    clubs: CLUBS,
+    participantNames: players,
+    clubs: [...CLUBS, ...MORE_CLUBS].slice(0, players.length / 2),
     config: { ...DEFAULT_CONFIG, seed: 5, ...config },
   });
   while (t.draw.picks.length < t.participants.length) t = spin(t, rng).tournament;
