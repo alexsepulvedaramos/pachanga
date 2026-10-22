@@ -271,11 +271,14 @@ function galaSlides(t) {
   if (votingClosed(t)) {
     const podium2 = ballonDorRanking(t).slice(0, 3);
     for (let i = podium2.length - 1; i >= 0; i--) {
+      const row = podium2[i];
       slides.push({
         kind: "ballonDor",
         place: i + 1,
-        participantId: podium2[i].participantId,
-        points: podium2[i].points
+        participantId: row.participantId,
+        points: row.points,
+        firsts: row.places[0],
+        ballots: row.places[0] + row.places[1] + row.places[2]
       });
     }
   }
