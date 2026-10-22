@@ -1,7 +1,7 @@
-// A player starts the match that's up, enters the result of the one they're playing, or makes their
-// team's knockout choice, from their phone, without the admin PIN. The phone proves the name is its own with the token it took the
-// name with; the change goes through the app's own rules (domain.js) and is saved like any other,
-// retrying if someone saved in between.
+// A player starts the match that's up, enters the result of the one they're playing, or makes
+// their team's knockout choice, from their phone, without the admin PIN. The phone proves the name
+// is its own with the token it took the name with; the change goes through the app's own rules
+// (domain.js) and is saved like any other, retrying if someone saved in between.
 
 import postgres from 'npm:postgres@3.4.5';
 import { playerMakeChoice, playerStartMatch, reportResult } from './domain.js';
