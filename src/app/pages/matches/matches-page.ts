@@ -112,6 +112,11 @@ import { rematchDraft } from '../../domain/rematch';
                   <p class="mt-3 text-center text-sm text-mist">Al empezar se sortea el invitado del jugador suelto.</p>
                 }
               }
+            } @else if (m.status === 'live' && iPlay(m)) {
+              <div class="mt-6 flex flex-col items-center gap-2">
+                <button type="button" class="btn-primary px-10 text-lg" (click)="editing.set(m.id)">Meter resultado</button>
+                <p class="text-center text-xs text-mist">Lo puede meter cualquiera de los que jugáis; el admin lo corrige si hace falta.</p>
+              </div>
             }
           </section>
         }
@@ -175,7 +180,7 @@ import { rematchDraft } from '../../domain/rematch';
           [heading]="session.teamName(em.homeId) + ' vs ' + session.teamName(em.awayId)"
           (closed)="editing.set(null)"
         >
-          <app-result-form [match]="em" (saved)="editing.set(null)" (cancelled)="editing.set(null)" />
+          <app-result-form [match]="em" [asPlayer]="!session.isAdmin()" (saved)="editing.set(null)" (cancelled)="editing.set(null)" />
         </app-modal>
       }
     }
@@ -263,6 +268,13 @@ export class MatchesPage {
     const several = (t?.matches.filter((x) => x.phase === m.phase).length ?? 0) > 1;
     if (m.phase !== 'third' && m.phase !== 'final' && several) return `${PHASE_LABELS[m.phase]} ${m.id.slice(-1)}`;
     return PHASE_LABELS[m.phase];
+  }
+
+  /** Whether the person using this phone plays in a match. */
+  protected iPlay(m: Match): boolean {
+    const t = this.session.tournament();
+    const me = this.session.me();
+    return !!t && !!me && playsIn(t, m, me);
   }
 
   protected soloTeams(m: Match): Id[] {

@@ -42,3 +42,29 @@ test('a name another phone holds cannot be picked, and a guest can still follow'
   await expect(guest.getByText('Invitado', { exact: true })).toBeVisible();
   await other.close();
 });
+
+test('a player of the live match enters its result from their phone', async ({ page }) => {
+  const t = newTournament('DEMOREPORT');
+  const first = t.matches[0];
+  const home = t.teams.find((x) => x.id === first.homeId)!;
+  const away = t.teams.find((x) => x.id === first.awayId)!;
+  const player = t.participants.find((p) => p.id === home.memberIds[0])!.name;
+  await openWith(page, t);
+  await pickName(page, player);
+
+  // The admin starts the match, then this phone stops being the admin's.
+  await page.getByRole('button', { name: 'Empezar partido' }).click();
+  await page.getByRole('button', { name: 'Admin', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Solo ver' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Meter resultado' }).click();
+  await page.getByRole('button', { name: `Sumar goles ${home.club}` }).click();
+  await page.getByRole('button', { name: `Sumar goles ${away.club}` }).click();
+  await page.getByRole('button', { name: `Sumar goles ${away.club}` }).click();
+  await page.getByRole('button', { name: 'Guardar resultado' }).click();
+
+  const row = page.locator('ol li').first();
+  await expect(row).toContainText('1–2');
+  await row.getByRole('button').first().click();
+  await expect(page.getByText(`Resultado metido por ${player}.`)).toBeVisible();
+});

@@ -1,4 +1,5 @@
 import { Tournament } from '../domain/types';
+import { MatchResult } from '../domain/tournament';
 
 export interface StoredTournament {
   tournament: Tournament;
@@ -78,6 +79,12 @@ export abstract class TournamentRepository {
   abstract release(id: string, participantId: string, token: string, dropVote: boolean): Promise<void>;
   /** Frees a name whatever phone holds it. Needs the admin PIN. */
   abstract adminRelease(id: string, pin: string, participantId: string): Promise<void>;
+
+  /**
+   * A player of a live match enters its result from the phone holding their name (`token`),
+   * without the admin PIN.
+   */
+  abstract reportResult(id: string, participantId: string, token: string, matchId: string, result: MatchResult): Promise<void>;
 
   /**
    * Casts or changes a participant's Ballon d'Or podium. The first ballot is tied to `token`, kept

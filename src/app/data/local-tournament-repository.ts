@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BallonDorVote, Tournament } from '../domain/types';
 import { ballonDorState, validateVote, votingOpen } from '../domain/ballon-dor';
+import { MatchResult, reportResult } from '../domain/tournament';
 import {
   ConflictError,
   hashPin,
@@ -109,6 +110,16 @@ export class LocalTournamentRepository extends TournamentRepository {
     const record = this.read(id);
     if (!record || !(await this.verifyPin(id, pin))) throw new WrongPinError();
     this.write(withClaims(record, (record.claims ?? []).filter((c) => c.participantId !== participantId)));
+  }
+
+  async reportResult(id: string, participantId: string, token: string, matchId: string, result: MatchResult): Promise<void> {
+    const record = this.read(id);
+    if (!record) throw new ConflictError();
+    if (!(record.claims ?? []).some((c) => c.participantId === participantId && c.token === token)) {
+      throw new Error('Ese nombre no es de este móvil.');
+    }
+    const tournament = reportResult(record.tournament, participantId, matchId, result);
+    this.write({ ...record, tournament, version: record.version + 1 });
   }
 
   async castVote(id: string, voterId: string, picks: string[], token: string): Promise<void> {

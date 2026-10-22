@@ -164,6 +164,8 @@ export class ResultForm implements OnInit {
   private readonly toast = inject(ToastService);
 
   readonly match = input.required<Match>();
+  /** Entered by a player of the match from their phone, rather than by the admin. */
+  readonly asPlayer = input(false);
   readonly saved = output<void>();
   readonly cancelled = output<void>();
 
@@ -313,6 +315,10 @@ export class ResultForm implements OnInit {
       recordResult(this.session.tournament()!, m.id, result);
     } catch (error) {
       this.toast.error(error);
+      return;
+    }
+    if (this.asPlayer()) {
+      if (await this.session.reportResult(m.id, result)) this.saved.emit();
       return;
     }
     this.saved.emit();

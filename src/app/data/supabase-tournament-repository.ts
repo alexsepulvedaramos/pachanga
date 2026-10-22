@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Tournament } from '../domain/types';
+import { MatchResult } from '../domain/tournament';
 import { BACKEND } from '../config';
 import {
   ConflictError,
@@ -105,6 +106,16 @@ export class SupabaseTournamentRepository extends TournamentRepository {
     });
     if (error) throw new Error('No se ha podido liberar el nombre. Revisa la conexión.');
     this.checkAdminCode(data as number);
+  }
+
+  async reportResult(id: string, participantId: string, token: string, matchId: string, result: MatchResult): Promise<void> {
+    const { error } = await this.client.functions.invoke('submit-result', {
+      body: { tournament_id: id, participant_id: participantId, token, match_id: matchId, result },
+    });
+    if (!error) return;
+    // The function explains refusals (not started, not playing, already in) in its body.
+    const body = await (error as { context?: Response }).context?.json?.().catch(() => null);
+    throw new Error(body?.error ?? 'No se ha podido guardar el resultado. Revisa la conexión.');
   }
 
   async castVote(id: string, voterId: string, picks: string[], token: string): Promise<void> {

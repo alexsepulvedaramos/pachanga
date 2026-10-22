@@ -17,10 +17,10 @@ jobs:
       - run: npm ci
       - run: npx ng test --watch=false
       - run: npm run build
-      - name: Notification bundle is up to date with the domain code
+      - name: Edge Function bundles are up to date with the domain code
         run: |
-          npm run build:notify
-          git diff --exit-code supabase/functions/notify/domain.js
+          npm run build:functions
+          git diff --exit-code supabase/functions/*/domain.js
 
   e2e:
     runs-on: ubuntu-latest

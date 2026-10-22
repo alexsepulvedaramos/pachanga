@@ -1,5 +1,5 @@
 // Who to notify for the current state of a tournament. Bundled with the app's domain code into
-// domain.js (npm run build:notify) so the Edge Function uses exactly the same rules as the app.
+// domain.js (npm run build:functions) so the Edge Function uses exactly the same rules as the app.
 
 import { PHASE_LABELS } from '../../../src/app/domain/knockout';
 import {

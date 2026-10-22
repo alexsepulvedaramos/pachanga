@@ -10,6 +10,7 @@ import {
   WrongPinError,
 } from './tournament-repository';
 import { validateVote } from '../domain/ballon-dor';
+import { MatchResult, reportResult } from '../domain/tournament';
 import { ToastService } from '../ui/toast.service';
 
 /** Saves retried on top of someone else's change before giving up. */
@@ -244,6 +245,26 @@ export class TournamentSession {
       }
     } catch (error) {
       this.toast.error(error); // could not even reload: offline
+      return false;
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  /** The person using this phone enters the result of the match they're playing. */
+  async reportResult(matchId: Id, result: MatchResult): Promise<boolean> {
+    const t = this.tournament();
+    const me = this.me();
+    if (!t || !me) return false;
+    this.saving.set(true);
+    try {
+      reportResult(t, me, matchId, result); // same checks as the server, with its messages, before going out
+      await (await this.store.repo(t.id)).reportResult(t.id, me, this.store.deviceToken(t.id), matchId, result);
+      this.saving.set(false);
+      await this.refresh();
+      return true;
+    } catch (error) {
+      this.toast.error(error);
       return false;
     } finally {
       this.saving.set(false);

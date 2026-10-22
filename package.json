@@ -6,10 +6,10 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "npm run build:notify && ng test",
+    "test": "npm run build:functions && ng test",
     "update:clubs": "node --no-warnings scripts/update-club-ratings.ts",
-    "build:notify": "esbuild supabase/functions/notify/messages.ts --bundle --format=esm --platform=neutral --outfile=supabase/functions/notify/domain.js",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "build:functions": "esbuild supabase/functions/notify/messages.ts --bundle --format=esm --platform=neutral --outfile=supabase/functions/notify/domain.js && esbuild supabase/functions/submit-result/rules.ts --bundle --format=esm --platform=neutral --outfile=supabase/functions/submit-result/domain.js"
   },
   "private": true,
   "packageManager": "npm@11.11.0",

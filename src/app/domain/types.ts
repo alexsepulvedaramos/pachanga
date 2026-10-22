@@ -54,6 +54,8 @@ export interface Match {
   standIns?: Record<Id, Id>;
   goals?: Goal[];
   incidents?: Incident[];
+  /** Player who entered the result from their phone; missing when the admin did. */
+  reportedBy?: Id;
 }
 
 export type TiebreakCriterion =
