@@ -127,6 +127,8 @@ export interface Tournament {
   liveMatchId?: Id;
   /** Names a phone has taken, written by the server: nobody else can pick them. */
   claimed?: Id[];
+  /** The app's demo: its made-up players cast their Ballon d'Or ballots by themselves. */
+  demo?: boolean;
   /** Ballon d'Or vote, written by the server as players vote. */
   ballonDor?: BallonDorState;
   /** Closing ceremony shown live on every screen, driven by the admin. */

@@ -72,3 +72,23 @@ describe('names taken by phones', () => {
     expect(t.ballonDor?.voters).toEqual(['p2']);
   });
 });
+
+describe("the demo's Ballon d'Or", () => {
+  it('has its made-up players vote by themselves, leaving the names taken to vote', async () => {
+    sessionStorage.clear();
+    const repo = new LocalTournamentRepository();
+    const t = tournament();
+    await repo.create({ ...t, stage: 'knockout', demo: true }, PIN);
+    await repo.claim('DEMOCLAIM', 'p1', ALEX_PHONE);
+    const before = (await repo.load('DEMOCLAIM'))!;
+
+    // The final is entered: the vote opens and everyone but Alex has voted.
+    await repo.save({ ...before.tournament, stage: 'finished' }, PIN, before.version);
+    const voters = (await repo.load('DEMOCLAIM'))!.tournament.ballonDor?.voters ?? [];
+    expect(voters).toHaveLength(t.participants.length - 1);
+    expect(voters).not.toContain('p1');
+
+    await repo.castVote('DEMOCLAIM', 'p1', ['p2', 'p3', 'p4'], ALEX_PHONE);
+    expect((await repo.load('DEMOCLAIM'))!.tournament.ballonDor?.closedAt).toBeTruthy();
+  });
+});

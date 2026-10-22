@@ -2,9 +2,9 @@ import { Injectable, inject } from '@angular/core';
 import { hasBackend } from '../config';
 import { Tournament } from '../domain/types';
 import { LocalTournamentRepository } from './local-tournament-repository';
-import { NotFoundError, StoredTournament, TournamentRepository } from './tournament-repository';
+import { DEMO_PREFIX, NotFoundError, StoredTournament, TournamentRepository } from './tournament-repository';
 
-export const DEMO_PREFIX = 'DEMO';
+export { DEMO_PREFIX };
 
 export interface RecentTournament {
   id: string;
