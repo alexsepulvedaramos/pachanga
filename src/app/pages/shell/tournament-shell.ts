@@ -82,12 +82,12 @@ import { IdentityGate } from '../../ui/identity-gate';
           </form>
         }
 
-        <nav class="no-scrollbar mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 pb-0 pt-3" aria-label="Secciones">
+        <nav class="no-scrollbar mx-auto flex max-w-5xl overflow-x-auto px-2 pb-0 pt-3 sm:gap-1 sm:px-4" aria-label="Secciones">
           @for (tab of tabs(); track tab.path) {
             <a
               [routerLink]="tab.path"
               routerLinkActive="!border-volt !text-chalk"
-              class="shrink-0 border-b-[3px] border-transparent px-3 pb-2 font-display text-base font-bold uppercase italic tracking-wide text-mist hover:text-chalk"
+              class="shrink-0 border-b-[3px] border-transparent px-2 pb-2 font-display text-sm font-bold uppercase italic tracking-wide text-mist hover:text-chalk min-[400px]:text-base sm:px-3"
             >
               {{ tab.label }}
             </a>

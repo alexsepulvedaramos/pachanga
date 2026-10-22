@@ -63,7 +63,7 @@ const SLIDE_MS: Record<GalaSlide['kind'], number> = {
             <p class="eyebrow truncate text-chalk/80">{{ t.name }}</p>
             <div class="flex items-center gap-2">
               @if (live() && !ended()) {
-                <span class="tag animate-pulse-live bg-flare text-ink">En directo</span>
+                <span class="tag bg-flare text-ink"><span class="mr-1.5 inline-block size-1.5 animate-pulse-live bg-ink align-middle"></span>En directo</span>
               }
               <button
                 type="button"

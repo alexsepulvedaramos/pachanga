@@ -128,7 +128,10 @@ const PLACES = ['1º', '2º', '3º'];
                   </li>
                 }
               </ul>
-              <div class="mt-4 flex justify-end gap-2">
+              <div class="mt-4 flex items-center justify-end gap-2">
+                @if (!complete()) {
+                  <p class="mr-auto text-xs text-mist">Elige tu 1º, 2º y 3º.</p>
+                }
                 @if (editing()) {
                   <button type="button" class="btn-secondary" (click)="editing.set(false)">Cancelar</button>
                 }

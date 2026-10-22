@@ -85,7 +85,7 @@ import { rematchDraft } from '../../domain/rematch';
                 {{ phaseLabel(m) }} · {{ m.halfMinutes }} min/parte
               </p>
               @if (m.status === 'live') {
-                <span class="tag animate-pulse-live bg-flare text-ink">En juego</span>
+                <span class="tag bg-flare text-ink"><span class="mr-1.5 inline-block size-1.5 animate-pulse-live bg-ink align-middle"></span>En juego</span>
               } @else {
                 <span class="tag bg-line text-mist">Siguiente</span>
               }
@@ -140,9 +140,9 @@ import { rematchDraft } from '../../domain/rematch';
                     (keydown.enter)="toggleSummary(row.match)"
                   >
                     <span class="font-display text-sm font-bold text-mist">{{ row.number }}</span>
-                    <span class="flex min-w-0 items-center justify-end gap-2 font-display text-lg font-bold uppercase" [class.text-volt]="row.winner === row.match.homeId">
+                    <span class="flex min-w-0 items-center justify-end gap-1.5 font-display text-base font-bold uppercase sm:gap-2 sm:text-lg" [class.text-volt]="row.winner === row.match.homeId">
                       <span class="truncate">{{ session.teamName(row.match.homeId) }}</span>
-                      <app-club-crest [club]="session.teamName(row.match.homeId)" size="1.4rem" />
+                      <app-club-crest [club]="session.teamName(row.match.homeId)" size="1.2rem" />
                     </span>
                     <span class="heading min-w-16 bg-raised px-2 py-0.5 text-center text-xl tabular-nums" [class.text-flare]="row.match.status === 'live'">
                       @if (row.match.status === 'done') {
@@ -153,8 +153,8 @@ import { rematchDraft } from '../../domain/rematch';
                         –
                       }
                     </span>
-                    <span class="flex min-w-0 items-center gap-2 font-display text-lg font-bold uppercase" [class.text-volt]="row.winner === row.match.awayId">
-                      <app-club-crest [club]="session.teamName(row.match.awayId)" size="1.4rem" />
+                    <span class="flex min-w-0 items-center gap-1.5 font-display text-base font-bold uppercase sm:gap-2 sm:text-lg" [class.text-volt]="row.winner === row.match.awayId">
+                      <app-club-crest [club]="session.teamName(row.match.awayId)" size="1.2rem" />
                       <span class="truncate">{{ session.teamName(row.match.awayId) }}</span>
                       @if (row.match.incidents?.length) {
                         <span class="ml-1 inline-block h-3 w-2 shrink-0 bg-flare align-middle" [attr.title]="row.match.incidents!.length + ' sanción(es)'"></span>

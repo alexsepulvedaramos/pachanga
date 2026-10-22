@@ -173,7 +173,7 @@ const CLUB_SUGGESTIONS = [
           </span>
           <input
             type="checkbox"
-            class="size-6 accent-volt"
+            class="size-6 shrink-0 accent-volt"
             [checked]="trackScorers()"
             (change)="trackScorers.set($any($event.target).checked)"
           />
@@ -185,7 +185,7 @@ const CLUB_SUGGESTIONS = [
           </span>
           <input
             type="checkbox"
-            class="size-6 accent-volt"
+            class="size-6 shrink-0 accent-volt"
             [checked]="ballonDor()"
             (change)="ballonDor.set($any($event.target).checked)"
           />
