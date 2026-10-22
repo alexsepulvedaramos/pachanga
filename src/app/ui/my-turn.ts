@@ -6,10 +6,12 @@ import { myTurn, MyTurn } from '../domain/tournament';
 import { formatClock, formatDuration } from './format';
 import { ConfirmService } from './confirm.service';
 import { changeName } from './identity-gate';
+import { Icon } from './icon';
 
 /** Where the person using this phone stands: playing now, how long until they play… */
 @Component({
   selector: 'app-my-turn',
+  imports: [Icon],
   template: `
     @if (session.tournament(); as t) {
       @if (!session.me()) {
@@ -67,7 +69,7 @@ import { changeName } from './identity-gate';
         @switch (pushState()) {
           @case ('off') {
             <button type="button" class="btn-secondary mt-2 w-full text-sm" [disabled]="pushBusy()" (click)="enablePush()">
-              🔔 Avisarme cuando me toque
+              <app-icon name="bell" class="mr-1" /> Avisarme cuando me toque
             </button>
           }
           @case ('on') {

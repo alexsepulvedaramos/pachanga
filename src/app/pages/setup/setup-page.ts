@@ -21,6 +21,7 @@ import {
 } from '../../domain/tournament';
 import { formatDuration } from '../../ui/format';
 import { ClubPicker } from './club-picker';
+import { Icon } from '../../ui/icon';
 
 const CLUB_SUGGESTIONS = [
   'Real Madrid', 'Man City', 'Bayern', 'PSG', 'Inter', 'Liverpool', 'Barça', 'Arsenal',
@@ -29,7 +30,7 @@ const CLUB_SUGGESTIONS = [
 
 @Component({
   selector: 'app-setup-page',
-  imports: [Brand, RouterLink, ClubPicker],
+  imports: [Brand, RouterLink, ClubPicker, Icon],
   template: `
     <main class="mx-auto max-w-3xl px-4 pb-32 pt-6">
       <header class="flex items-center justify-between">
@@ -84,7 +85,7 @@ const CLUB_SUGGESTIONS = [
                 [attr.aria-label]="'Quitar a ' + p"
                 (click)="removePlayer(i)"
               >
-                ✕
+                <app-icon name="close" />
               </button>
             </li>
           }
@@ -148,7 +149,7 @@ const CLUB_SUGGESTIONS = [
               <span class="flex-1 font-medium">{{ labels[c] }}</span>
               <button type="button" class="px-2 py-1 text-mist hover:text-chalk disabled:opacity-20" [disabled]="first" (click)="moveTiebreaker(i, -1)" [attr.aria-label]="'Subir ' + labels[c]">▲</button>
               <button type="button" class="px-2 py-1 text-mist hover:text-chalk disabled:opacity-20" [disabled]="last" (click)="moveTiebreaker(i, 1)" [attr.aria-label]="'Bajar ' + labels[c]">▼</button>
-              <button type="button" class="px-2 py-1 text-mist hover:text-flare" (click)="removeTiebreaker(c)" [attr.aria-label]="'Quitar ' + labels[c]">✕</button>
+              <button type="button" class="px-2 py-1 text-mist hover:text-flare" (click)="removeTiebreaker(c)" [attr.aria-label]="'Quitar ' + labels[c]"><app-icon name="close" /></button>
             </li>
           }
         </ol>

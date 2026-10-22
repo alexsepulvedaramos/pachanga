@@ -5,6 +5,7 @@ import { ClubSquads } from '../../data/club-squads';
 import { Goal, Id, Incident, Match } from '../../domain/types';
 import { lineup, recordResult } from '../../domain/tournament';
 import { ToastService } from '../../ui/toast.service';
+import { Icon } from '../../ui/icon';
 
 /** Lower case without accents, for searching names. */
 const fold = (text: string) => text.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
@@ -25,7 +26,7 @@ function withUnassigned(m: Match): Goal[] {
 @Component({
   selector: 'app-result-form',
   host: { '(document:pointerdown)': 'closeOnOutside($event)' },
-  imports: [Stepper],
+  imports: [Stepper, Icon],
   template: `
     @let m = match();
     @if (trackScorers()) {
@@ -74,11 +75,11 @@ function withUnassigned(m: Match): Goal[] {
                     [class.text-mist]="pid === null"
                     (click)="addScorer(side.teamId, pid)"
                   >
-                    ⚽ {{ pid === null ? 'En propia' : session.personName(pid) }}
+                    <app-icon name="ball" class="mr-1 text-mist" /> {{ pid === null ? 'En propia' : session.personName(pid) }}
                   </button>
                   @if (count(side.teamId, pid); as n) {
                     <button type="button" class="tag bg-volt text-ink" (click)="removeScorer(side.teamId, pid)" [attr.aria-label]="'Quitar un gol de ' + (pid === null ? 'en propia' : session.personName(pid))">
-                      {{ n }} ✕
+                      {{ n }} <app-icon name="close" />
                     </button>
                   }
                 </li>
@@ -105,7 +106,7 @@ function withUnassigned(m: Match): Goal[] {
                     {{ x.kind === 'redCard' ? 'Roja' : 'Lesión' }}
                   </span>
                   <span class="flex-1 truncate">{{ x.player }}</span>
-                  <button type="button" class="px-1 text-mist hover:text-flare" [attr.aria-label]="'Quitar ' + x.player" (click)="removeIncident(x)">✕</button>
+                  <button type="button" class="px-1 text-mist hover:text-flare" [attr.aria-label]="'Quitar ' + x.player" (click)="removeIncident(x)"><app-icon name="close" /></button>
                 </li>
               }
             </ul>

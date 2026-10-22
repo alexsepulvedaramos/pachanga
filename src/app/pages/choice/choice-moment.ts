@@ -3,6 +3,7 @@ import { TournamentSession } from '../../data/tournament-session';
 import { Id } from '../../domain/types';
 import { ClubCrest } from '../../ui/club-crest';
 import { ChoiceMomentViewer } from './choice-moment-viewer';
+import { Icon } from '../../ui/icon';
 
 /**
  * Full screen "moment to choose" in the knockout: the team whose turn it is picks a rival (or the
@@ -11,7 +12,7 @@ import { ChoiceMomentViewer } from './choice-moment-viewer';
  */
 @Component({
   selector: 'app-choice-moment',
-  imports: [ClubCrest],
+  imports: [ClubCrest, Icon],
   host: { '(document:keydown.escape)': 'display() || viewer.close()' },
   template: `
     @if (session.tournament(); as t) {
@@ -25,7 +26,7 @@ import { ChoiceMomentViewer } from './choice-moment-viewer';
         <div class="flex items-center justify-between gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))]">
           <p class="eyebrow truncate text-chalk/80">{{ t.name }} · {{ stageName() }}</p>
           @if (!display()) {
-            <button type="button" class="px-2 text-2xl text-chalk/80 hover:text-chalk" aria-label="Cerrar" (click)="viewer.close()">✕</button>
+            <button type="button" class="px-2 text-2xl text-chalk/80 hover:text-chalk" aria-label="Cerrar" (click)="viewer.close()"><app-icon name="close" /></button>
           }
         </div>
 

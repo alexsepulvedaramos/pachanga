@@ -9,6 +9,7 @@ import { GalaViewer } from './gala-viewer';
 import { ShareWrapped } from '../../ui/share-wrapped';
 import { changeName } from '../../ui/identity-gate';
 import { PushNotifications } from '../../data/push-notifications';
+import { Icon } from '../../ui/icon';
 
 const PLACES = ['1º', '2º', '3º'];
 
@@ -18,6 +19,7 @@ const PLACES = ['1º', '2º', '3º'];
  */
 @Component({
   selector: 'app-ballon-dor-panel',
+  imports: [Icon],
   template: `
     @if (session.tournament(); as t) {
       @if (open()) {
@@ -42,11 +44,11 @@ const PLACES = ['1º', '2º', '3º'];
                   [attr.aria-label]="p.name + ' ha votado. Borrar su voto'"
                   (click)="reset(p.id, p.name)"
                 >
-                  ✓ {{ p.name }}
+                  <app-icon name="check" /> {{ p.name }}
                 </button>
               } @else {
                 <span class="tag" [class]="voters().includes(p.id) ? 'bg-gold text-ink' : 'bg-line text-mist'">
-                  {{ voters().includes(p.id) ? '✓ ' : '' }}{{ p.name }}
+                  @if (voters().includes(p.id)) {<app-icon name="check" /> }{{ p.name }}
                 </span>
               }
             }
