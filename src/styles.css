@@ -168,6 +168,11 @@
   text-transform: uppercase;
 }
 
+/* TV mode sizes everything to the screen: ~17px on a 1080p TV, never under 12px on a tablet. */
+html.tv-screen {
+  font-size: clamp(12px, min(0.9vw, 1.6vh), 22px);
+}
+
 /* Room the phone tab bar takes at the bottom, for anything else fixed there. */
 html.has-bottom-nav {
   --bottom-nav: 4.25rem;

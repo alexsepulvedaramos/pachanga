@@ -64,7 +64,11 @@ their own phones or on the TV.
 - **Share to the group chat.** The tournament link goes to WhatsApp, the phone's share sheet or the
   clipboard: offered right after creating the tournament, from the code in the header, and with the
   standings as text.
-- **TV mode** with the current match, standings and upcoming fixtures in big type.
+- **TV mode** with the current match, standings and upcoming fixtures in big type. It scales to
+  the screen, so a laptop or tablet next to the console works as a scoreboard while the TV is busy
+  with the game, keeps that screen awake, and shows a QR code to open the tournament on a phone.
+- **Tidy fixture list.** Played matches fold away while the tournament goes on, all but the latest
+  result, with a button to show them.
 - **Installable** as a PWA (manifest, maskable icons, service worker), with an install banner that
   uses the browser prompt on Android/desktop and explains Add to Home Screen on iOS.
 - **Estimated finish time** from minutes per half and changeover time per phase.

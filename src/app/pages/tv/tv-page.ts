@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input } from '@angular/core';
+import { Component, computed, DestroyRef, DOCUMENT, effect, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TournamentSession } from '../../data/tournament-session';
 import { Brand } from '../../ui/brand';
@@ -11,26 +11,38 @@ import { Match } from '../../domain/types';
 import { votingOpen } from '../../domain/ballon-dor';
 import { Gala } from '../gala/gala';
 import { GalaViewer } from '../gala/gala-viewer';
+import { QrCode } from '../../ui/qr-code';
+import { tournamentUrl } from '../../domain/share-text';
 
-/** Big-screen view: current match, table and what comes next. Updates live. */
+/**
+ * Big-screen view: current match, table and what comes next, updating live. Made to be left
+ * alone on a TV, a laptop or a tablet next to the console: it scales to the screen, keeps it awake
+ * and shows a QR to join from a phone.
+ */
 @Component({
   selector: 'app-tv-page',
-  imports: [Brand, MatchCard, StandingsTable, DecisionPanel, RouterLink, Gala],
+  imports: [Brand, MatchCard, StandingsTable, DecisionPanel, RouterLink, Gala, QrCode],
   providers: [TournamentSession, GalaViewer],
   template: `
     @if (session.tournament(); as t) {
       <div class="flex min-h-dvh flex-col gap-6 p-6 lg:p-10">
-        <header class="flex items-center justify-between">
-          <a [routerLink]="['/t', t.id]"><app-brand size="md" /></a>
-          <p class="heading text-3xl text-mist">{{ t.name }}</p>
-          <p class="font-display text-2xl font-bold tracking-[0.3em] text-mist">{{ t.id }}</p>
+        <header class="flex items-center justify-between gap-6">
+          <a [routerLink]="['/t', t.id]" class="shrink-0"><app-brand size="md" /></a>
+          <p class="heading min-w-0 truncate text-3xl text-mist">{{ t.name }}</p>
+          <div class="flex shrink-0 items-center gap-4">
+            <div class="text-right">
+              <p class="eyebrow text-mist">Síguelo en el móvil</p>
+              <p class="font-display text-3xl font-bold tracking-[0.3em]">{{ t.id }}</p>
+            </div>
+            <app-qr-code class="size-24" [value]="joinUrl()" [label]="'QR para abrir ' + t.name" />
+          </div>
         </header>
 
         @if (t.stage === 'finished') {
           <section class="cut grid flex-1 animate-rise place-items-center bg-volt p-10 text-center text-ink">
             <div>
               <p class="eyebrow text-xl">Campeones</p>
-              <p class="heading mt-3 text-[9rem] leading-none">{{ championClub() }}</p>
+              <p class="heading mt-3 text-[9rem] leading-none break-words">{{ championClub() }}</p>
               <p class="mt-4 font-display text-5xl font-bold uppercase">{{ championNames() }}</p>
               @if (voting()) {
                 <p class="mt-10 font-display text-4xl font-bold uppercase">
@@ -54,7 +66,7 @@ import { GalaViewer } from '../gala/gala-viewer';
             </div>
           </section>
         } @else {
-          <div class="grid flex-1 gap-8 xl:grid-cols-[1.4fr_1fr]">
+          <div class="grid flex-1 content-start gap-8 lg:grid-cols-[1.4fr_1fr]">
             <section class="flex flex-col gap-6">
               <app-decision-panel />
               @if (current(); as m) {
@@ -108,8 +120,20 @@ export class TvPage {
     return !!t && votingOpen(t);
   });
 
+  protected readonly joinUrl = computed(() => {
+    const t = this.session.tournament();
+    return t ? tournamentUrl(location.origin, t) : '';
+  });
+
   constructor() {
     effect(() => void this.session.open(this.id().toUpperCase()));
+    const root = inject(DOCUMENT).documentElement;
+    root.classList.add('tv-screen');
+    const releaseWakeLock = keepAwake();
+    inject(DestroyRef).onDestroy(() => {
+      root.classList.remove('tv-screen');
+      releaseWakeLock();
+    });
   }
 
   protected readonly current = computed(() => {
@@ -144,4 +168,23 @@ export class TvPage {
   protected label(m: Match): string {
     return m.phase === 'group' ? `Liguilla · Jornada ${m.round}` : PHASE_LABELS[m.phase];
   }
+}
+
+/** Keeps the screen on while the page is open, asking again whenever it comes back into view. */
+function keepAwake(): () => void {
+  if (!('wakeLock' in navigator)) return () => undefined;
+  let lock: WakeLockSentinel | null = null;
+  const request = () => {
+    if (document.visibilityState !== 'visible') return;
+    navigator.wakeLock.request('screen').then(
+      (sentinel) => (lock = sentinel),
+      () => undefined,
+    );
+  };
+  request();
+  document.addEventListener('visibilitychange', request);
+  return () => {
+    document.removeEventListener('visibilitychange', request);
+    void lock?.release();
+  };
 }
