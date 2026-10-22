@@ -11,6 +11,11 @@ import {
 import { validateVote } from '../domain/ballon-dor';
 import { ToastService } from '../ui/toast.service';
 
+/** Saves retried on top of someone else's change before giving up. */
+const MAX_SAVE_ATTEMPTS = 3;
+
+const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
 /** One open tournament: live state, admin rights and the actions that change it. */
 @Injectable()
 export class TournamentSession {
@@ -115,37 +120,55 @@ export class TournamentSession {
     this.pin.set(null);
   }
 
-  /** Applies a domain action locally, then persists it. Rolls back if the save fails. */
+  /**
+   * Applies a domain action locally, then persists it. If someone else saved in the meantime (a
+   * vote, another admin device), the action runs again on their version: actions are pure, so
+   * nothing is lost unless it no longer makes sense there. Rolls back if the save fails.
+   */
   async apply(action: (t: Tournament, rng: Rng) => Tournament): Promise<boolean> {
-    const current = this.tournament();
     const pin = this.pin();
-    if (!current || !pin) {
+    if (!this.tournament() || !pin) {
       this.toast.error('Desbloquea el modo admin para hacer cambios.');
       return false;
     }
-    let next: Tournament;
-    try {
-      next = action(current, Math.random);
-    } catch (error) {
-      this.toast.error(error);
-      return false;
-    }
-    this.tournament.set(next);
     this.saving.set(true);
     try {
-      const stored = await (await this.store.repo(next.id)).save(next, pin, this.version);
-      this.version = stored.version;
-      return true;
-    } catch (error) {
-      this.toast.error(error);
-      if (error instanceof WrongPinError || error instanceof PinLockedError) this.lock();
-      if (error instanceof ConflictError) {
-        const fresh = await this.store.load(next.id);
-        this.version = fresh.version;
-        this.tournament.set(fresh.tournament);
-      } else {
-        this.tournament.set(current);
+      for (let attempt = 1; ; attempt++) {
+        const current = this.tournament()!;
+        let next: Tournament;
+        try {
+          next = action(current, Math.random);
+        } catch (error) {
+          if (attempt === 1) this.toast.error(error);
+          else this.toast.error(`Alguien ha cambiado el torneo a la vez y ya no se puede: ${errorText(error)}`);
+          return false;
+        }
+        this.tournament.set(next);
+        try {
+          const stored = await (await this.store.repo(next.id)).save(next, pin, this.version);
+          this.version = stored.version;
+          return true;
+        } catch (error) {
+          if (error instanceof ConflictError && attempt < MAX_SAVE_ATTEMPTS) {
+            const fresh = await this.store.load(next.id);
+            this.version = fresh.version;
+            this.tournament.set(fresh.tournament);
+            continue;
+          }
+          this.toast.error(error);
+          if (error instanceof WrongPinError || error instanceof PinLockedError) this.lock();
+          if (error instanceof ConflictError) {
+            const fresh = await this.store.load(next.id);
+            this.version = fresh.version;
+            this.tournament.set(fresh.tournament);
+          } else {
+            this.tournament.set(current);
+          }
+          return false;
+        }
       }
+    } catch (error) {
+      this.toast.error(error); // could not even reload: offline
       return false;
     } finally {
       this.saving.set(false);
