@@ -1,6 +1,7 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { TournamentSession } from '../data/tournament-session';
 import { clubColor } from './club-colors';
+import { ClubCrest } from './club-crest';
 import { Match } from '../domain/types';
 import { winnerOf } from '../domain/knockout';
 import { lineup, unavailableFor } from '../domain/tournament';
@@ -8,6 +9,7 @@ import { lineup, unavailableFor } from '../domain/tournament';
 /** Big scoreboard for one match: clubs, who plays for each side and the score. */
 @Component({
   selector: 'app-match-card',
+  imports: [ClubCrest],
   template: `
     @let m = match();
     <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-6">
@@ -29,7 +31,7 @@ import { lineup, unavailableFor } from '../domain/tournament';
           </div>
         }
         <div [class.text-right]="i === 1" [class.opacity-50]="side.lost">
-          <span class="mb-2 block h-1.5 w-12" [class.ml-auto]="i === 1" [style.background]="side.color"></span>
+          <app-club-crest class="mb-2" [club]="side.club" [color]="side.color" [size]="big() ? '5rem' : '3rem'" />
           <p class="heading break-words" [class]="big() ? 'text-4xl sm:text-6xl' : 'text-2xl sm:text-3xl'">{{ side.club }}</p>
           <ul class="mt-1.5 space-y-0.5" [class]="big() ? 'text-xl' : 'text-sm'">
             @for (p of side.players; track p.id) {

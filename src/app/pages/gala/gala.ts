@@ -4,6 +4,7 @@ import { galaLive, GalaSlide, galaSlides, setGalaStep } from '../../domain/gala'
 import { topScorers } from '../../domain/tournament';
 import { Id, Match } from '../../domain/types';
 import { clubColor } from '../../ui/club-colors';
+import { ClubCrest } from '../../ui/club-crest';
 import { Confetti } from '../../ui/confetti';
 import { CountUp } from '../../ui/count-up';
 import { GalaViewer } from './gala-viewer';
@@ -28,7 +29,7 @@ const SUSPENSE_MS = { 3: 2200, 2: 2800, 1: 4200 } as const;
  */
 @Component({
   selector: 'app-gala',
-  imports: [Confetti, CountUp],
+  imports: [Confetti, CountUp, ClubCrest],
   host: {
     '(document:keydown.arrowright)': 'next()',
     '(document:keydown.space)': '$event.preventDefault(); next()',
@@ -110,8 +111,13 @@ const SUSPENSE_MS = { 3: 2200, 2: 2800, 1: 4200 } as const;
                   [style.background]="'radial-gradient(circle at 50% 40%, ' + clubColorOf(slide.teamId) + '55, var(--color-ink) 70%)'"
                 ></div>
                 <app-confetti [amount]="180" />
-                <p class="animate-pop text-[clamp(5rem,22vw,11rem)] leading-none" aria-hidden="true">🏆</p>
-                <p class="eyebrow mt-4 animate-rise text-volt [animation-delay:400ms]">Campeones</p>
+                <app-club-crest
+                  class="animate-pop"
+                  [club]="session.teamName(slide.teamId)"
+                  [color]="clubColorOf(slide.teamId)"
+                  size="clamp(6rem, 30vw, 12rem)"
+                />
+                <p class="eyebrow mt-4 animate-rise text-volt [animation-delay:400ms]">🏆 Campeones</p>
                 <h2 class="heading mt-2 animate-slam text-[clamp(3.5rem,16vw,10rem)] [animation-delay:700ms]">{{ session.teamName(slide.teamId) }}</h2>
                 <p class="mt-4 animate-rise font-display text-[clamp(1.5rem,6vw,3rem)] font-bold uppercase [animation-delay:1300ms]">
                   {{ names(slide.playerIds) }}
@@ -160,7 +166,10 @@ const SUSPENSE_MS = { 3: 2200, 2: 2800, 1: 4200 } as const;
                   >
                     {{ session.personName(slide.participantId) }}
                   </h2>
-                  <p class="mt-3 animate-rise font-display text-[clamp(1.25rem,5vw,2.25rem)] font-bold uppercase text-mist [animation-delay:700ms]">
+                  <p class="mt-3 flex animate-rise items-center justify-center gap-2 font-display text-[clamp(1.25rem,5vw,2.25rem)] font-bold uppercase text-mist [animation-delay:700ms]">
+                    @if (clubOf(slide.participantId); as club) {
+                      <app-club-crest [club]="club" [color]="colorOfClub(club)" size="1.4em" />
+                    }
                     {{ detail(slide.participantId) }}
                   </p>
                   <p class="heading mt-6 animate-rise text-[clamp(2.5rem,10vw,5rem)] text-gold [animation-delay:1000ms]">
@@ -315,11 +324,19 @@ export class Gala implements OnInit, OnDestroy {
     return place === 1 ? 'Ganador' : place === 2 ? '2º puesto' : '3er puesto';
   }
 
+  protected clubOf(participantId: Id): string {
+    return this.session.tournament()?.teams.find((x) => x.memberIds.includes(participantId))?.club ?? '';
+  }
+
+  protected colorOfClub(club: string): string {
+    return clubColor(this.session.tournament()?.clubs ?? [], club);
+  }
+
   /** Club and, if scorers are tracked, goals of a Ballon d'Or nominee. */
   protected detail(participantId: Id): string {
     const t = this.session.tournament();
     if (!t) return '';
-    const club = t.teams.find((x) => x.memberIds.includes(participantId))?.club ?? '';
+    const club = this.clubOf(participantId);
     if (!t.config.trackScorers) return club;
     const goals = topScorers(t).find((s) => s.participantId === participantId)?.goals ?? 0;
     return `${club} · ${goals} ${goals === 1 ? 'gol' : 'goles'}`;

@@ -98,6 +98,10 @@ reads the public feed behind [ea.com/games/ea-sports-fc/ratings](https://www.ea.
 for every club in the big five leagues, finds each club's best XI across 4-3-3, 4-2-3-1, 4-4-2 and
 3-5-2, and averages it, which is how the game rates a team from its starting XI. The result is a
 static file per game edition in `public/data/clubs/`, with an index of the editions available.
+The same run keeps a copy of every club's crest in `public/data/clubs/crests/` (named by EA's
+team id, listed in `crests.json`, about 2.6 MB for the 96 clubs), so tournaments never depend on
+EA's servers. A club typed by hand or outside the big five gets a shield in its colour with its
+initials.
 
 - Estimates can differ by a point or two from the game, where each club uses its real coach's
   formation and lineup. The star rating is an approximation calibrated against published stars.

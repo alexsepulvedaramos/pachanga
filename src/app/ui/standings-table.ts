@@ -1,6 +1,7 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { TournamentSession } from '../data/tournament-session';
 import { clubColor } from './club-colors';
+import { ClubCrest } from './club-crest';
 import { knockoutFormat } from '../domain/knockout';
 import { standings } from '../domain/tournament';
 
@@ -14,6 +15,7 @@ const ZONE_STYLES: Record<Zone, string> = {
 
 @Component({
   selector: 'app-standings-table',
+  imports: [ClubCrest],
   template: `
     <!-- On phones the table scrolls sideways; position and team stay pinned on the left. -->
     <div class="no-scrollbar -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
@@ -43,7 +45,7 @@ const ZONE_STYLES: Record<Zone, string> = {
               <td class="sticky left-0 z-10 w-10 border-l-4 py-2.5 pl-3 font-extrabold italic" [class]="zoneStyles[row.zone]">{{ i + 1 }}</td>
               <td class="sticky left-10 z-10 py-2.5 pr-3 shadow-[6px_0_8px_-6px_rgba(0,0,0,0.6)]">
                 <div class="flex items-center gap-2.5">
-                  <span class="h-6 w-1 shrink-0" [style.background]="row.color"></span>
+                  <app-club-crest [club]="row.club" [color]="row.color" [size]="big() ? '2.5rem' : '1.75rem'" />
                   <div class="min-w-0 max-w-[9rem] sm:max-w-none">
                     <p class="truncate font-extrabold uppercase italic leading-tight">{{ row.club }}</p>
                     @if (!big()) {
