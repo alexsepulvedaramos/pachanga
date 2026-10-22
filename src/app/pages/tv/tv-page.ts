@@ -11,6 +11,8 @@ import { Match } from '../../domain/types';
 import { votingOpen } from '../../domain/ballon-dor';
 import { Gala } from '../gala/gala';
 import { GalaViewer } from '../gala/gala-viewer';
+import { LeagueRecap } from '../league/league-recap';
+import { LeagueRecapViewer } from '../league/league-recap-viewer';
 import { QrCode } from '../../ui/qr-code';
 import { tournamentUrl } from '../../domain/share-text';
 
@@ -21,8 +23,8 @@ import { tournamentUrl } from '../../domain/share-text';
  */
 @Component({
   selector: 'app-tv-page',
-  imports: [Brand, MatchCard, StandingsTable, DecisionPanel, RouterLink, Gala, QrCode],
-  providers: [TournamentSession, GalaViewer],
+  imports: [Brand, MatchCard, StandingsTable, DecisionPanel, RouterLink, Gala, LeagueRecap, QrCode],
+  providers: [TournamentSession, GalaViewer, LeagueRecapViewer],
   template: `
     @if (session.tournament(); as t) {
       <div class="flex min-h-dvh flex-col gap-6 p-6 lg:p-10">
@@ -104,6 +106,8 @@ import { tournamentUrl } from '../../domain/share-text';
       </div>
       @if (gala.mode()) {
         <app-gala />
+      } @else if (leagueRecap.open()) {
+        <app-league-recap [autoClose]="true" />
       }
     } @else if (session.loadError(); as error) {
       <p class="heading p-20 text-center text-5xl text-flare">{{ error }}</p>
@@ -113,6 +117,7 @@ import { tournamentUrl } from '../../domain/share-text';
 export class TvPage {
   protected readonly session = inject(TournamentSession);
   protected readonly gala = inject(GalaViewer);
+  protected readonly leagueRecap = inject(LeagueRecapViewer);
   readonly id = input.required<string>();
 
   protected readonly voting = computed(() => {
