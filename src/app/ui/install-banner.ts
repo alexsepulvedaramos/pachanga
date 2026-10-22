@@ -19,7 +19,7 @@ const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
   template: `
     @if (visible()) {
       <aside
-        class="cut fixed inset-x-3 bottom-3 z-40 mx-auto flex max-w-md animate-rise items-center gap-3 border-l-4 border-volt bg-raised p-3 shadow-2xl shadow-black/60"
+        class="cut fixed inset-x-3 bottom-[calc(0.75rem+var(--bottom-nav,0px))] z-40 mx-auto flex max-w-md animate-rise items-center gap-3 border-l-4 border-volt bg-raised p-3 shadow-2xl shadow-black/60"
         aria-label="Instalar Pachanga"
       >
         <img src="icons/icon-96x96.png" alt="" class="size-11 shrink-0" />

@@ -5,11 +5,13 @@ import { Component, input } from '@angular/core';
   template: `
     <span class="inline-flex select-none items-center gap-[0.3em]" [class]="sizes[size()]">
       <img src="favicon.svg" alt="" class="h-[1.05em] w-[1.05em] shrink-0" />
-      <span class="heading">Pachang<span class="text-volt">a</span></span>
+      <span class="heading" [class]="compact() ? 'hidden sm:inline' : ''">Pachang<span class="text-volt">a</span></span>
     </span>
   `,
 })
 export class Brand {
   readonly size = input<'sm' | 'md' | 'xl'>('md');
+  /** Only the mark on phones, the name from small tablets up. */
+  readonly compact = input(false);
   protected readonly sizes = { sm: 'text-xl', md: 'text-3xl', xl: 'text-6xl sm:text-8xl' };
 }

@@ -168,6 +168,16 @@
   text-transform: uppercase;
 }
 
+/* Room the phone tab bar takes at the bottom, for anything else fixed there. */
+html.has-bottom-nav {
+  --bottom-nav: 4.25rem;
+}
+@media (min-width: 40rem) {
+  html.has-bottom-nav {
+    --bottom-nav: 0px;
+  }
+}
+
 @layer base {
   html {
     color-scheme: dark;

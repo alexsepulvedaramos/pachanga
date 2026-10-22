@@ -54,8 +54,8 @@ test('a player of the live match enters its result from their phone', async ({ p
 
   // The admin starts the match, then this phone stops being the admin's.
   await page.getByRole('button', { name: 'Empezar partido' }).click();
-  await page.getByRole('button', { name: 'Admin', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Solo ver' })).toBeVisible();
+  await page.getByRole('button', { name: /salir del modo admin/ }).click();
+  await expect(page.getByRole('button', { name: 'Entrar como admin' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Meter resultado' }).click();
   await page.getByRole('button', { name: `Sumar goles ${home.club}` }).click();
