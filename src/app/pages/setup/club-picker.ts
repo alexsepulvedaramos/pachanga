@@ -1,4 +1,5 @@
 import { Component, computed, input, OnInit, output, signal } from '@angular/core';
+import { ClubCrest } from '../../ui/club-crest';
 import {
   ClubRating,
   ClubRatingsFile,
@@ -17,6 +18,7 @@ const LINES: { line: Line; label: string }[] = [
 /** Browse clubs by rating, open one to see its best XI, and pick as many as there are pairs. */
 @Component({
   selector: 'app-club-picker',
+  imports: [ClubCrest],
   template: `
     <div class="cut mt-3 animate-rise border-t-4 border-cyan bg-pitch p-4">
       @if (error()) {
@@ -78,6 +80,7 @@ const LINES: { line: Line; label: string }[] = [
                 >
                   {{ picked ? '✓' : '+' }}
                 </button>
+                <app-club-crest [club]="club.name" size="2.25rem" />
                 <button type="button" class="min-w-0 flex-1 text-left" (click)="expand(club)" [attr.aria-expanded]="expanded() === club.id">
                   <span class="block truncate font-display text-lg font-extrabold uppercase italic leading-tight">{{ club.name }}</span>
                   <span class="block truncate text-xs text-mist">{{ club.league }} · <span class="text-gold">{{ stars(club.stars) }}</span></span>

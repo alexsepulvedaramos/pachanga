@@ -24,10 +24,11 @@ import {
 } from '../../domain/tournament';
 import { formatClock, formatDuration } from '../../ui/format';
 import { BallonDorPanel } from '../gala/ballon-dor-panel';
+import { ClubCrest } from '../../ui/club-crest';
 
 @Component({
   selector: 'app-matches-page',
-  imports: [MatchCard, DecisionPanel, ResultForm, MatchSummary, Modal, RouterLink, MyTurnPanel, BallonDorPanel],
+  imports: [MatchCard, DecisionPanel, ResultForm, MatchSummary, Modal, RouterLink, MyTurnPanel, BallonDorPanel, ClubCrest],
   template: `
     @if (session.tournament(); as t) {
       @if (t.stage === 'draw') {
@@ -129,7 +130,10 @@ import { BallonDorPanel } from '../gala/ballon-dor-panel';
                     (keydown.enter)="toggleSummary(row.match)"
                   >
                     <span class="font-display text-sm font-bold text-mist">{{ row.number }}</span>
-                    <span class="truncate text-right font-display text-lg font-bold uppercase" [class.text-volt]="row.winner === row.match.homeId">{{ session.teamName(row.match.homeId) }}</span>
+                    <span class="flex min-w-0 items-center justify-end gap-2 font-display text-lg font-bold uppercase" [class.text-volt]="row.winner === row.match.homeId">
+                      <span class="truncate">{{ session.teamName(row.match.homeId) }}</span>
+                      <app-club-crest [club]="session.teamName(row.match.homeId)" size="1.4rem" />
+                    </span>
                     <span class="heading min-w-16 bg-raised px-2 py-0.5 text-center text-xl tabular-nums" [class.text-flare]="row.match.status === 'live'">
                       @if (row.match.status === 'done') {
                         <span [class.text-volt]="row.winner === row.match.homeId">{{ row.match.homeGoals }}</span><span class="text-mist">–</span><span [class.text-volt]="row.winner === row.match.awayId">{{ row.match.awayGoals }}</span>
@@ -139,10 +143,11 @@ import { BallonDorPanel } from '../gala/ballon-dor-panel';
                         –
                       }
                     </span>
-                    <span class="truncate font-display text-lg font-bold uppercase" [class.text-volt]="row.winner === row.match.awayId">
-                      {{ session.teamName(row.match.awayId) }}
+                    <span class="flex min-w-0 items-center gap-2 font-display text-lg font-bold uppercase" [class.text-volt]="row.winner === row.match.awayId">
+                      <app-club-crest [club]="session.teamName(row.match.awayId)" size="1.4rem" />
+                      <span class="truncate">{{ session.teamName(row.match.awayId) }}</span>
                       @if (row.match.incidents?.length) {
-                        <span class="ml-1 inline-block h-3 w-2 bg-flare align-middle" [attr.title]="row.match.incidents!.length + ' sanción(es)'"></span>
+                        <span class="ml-1 inline-block h-3 w-2 shrink-0 bg-flare align-middle" [attr.title]="row.match.incidents!.length + ' sanción(es)'"></span>
                       }
                     </span>
                     @if (session.isAdmin() && row.match.status === 'done') {

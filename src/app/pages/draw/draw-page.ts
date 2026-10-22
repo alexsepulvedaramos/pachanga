@@ -7,6 +7,7 @@ import { invitationText, tournamentUrl } from '../../domain/share-text';
 import { ConfirmService } from '../../ui/confirm.service';
 import { ToastService } from '../../ui/toast.service';
 import { clubColor } from '../../ui/club-colors';
+import { ClubCrest } from '../../ui/club-crest';
 import { Tournament } from '../../domain/types';
 import {
   activeMembers,
@@ -33,7 +34,7 @@ interface Reveal {
 
 @Component({
   selector: 'app-draw-page',
-  imports: [Wheel, ShareButtons],
+  imports: [Wheel, ShareButtons, ClubCrest],
   template: `
     @if (session.tournament(); as t) {
       @if (t.stage === 'draw') {
@@ -131,6 +132,7 @@ interface Reveal {
             @if (reveal(); as r) {
               <div class="panel mx-auto mt-6 max-w-md animate-rise text-center" [style.border-top]="'4px solid ' + color(t, r.club)">
                 <p class="eyebrow text-mist">{{ r.name }} juega con</p>
+                <app-club-crest class="mt-3 animate-rise" [club]="r.club" [color]="color(t, r.club)" size="4.5rem" />
                 <p class="heading mt-1 text-4xl" [style.color]="color(t, r.club)">{{ r.club }}</p>
                 @if (r.partner) {
                   <p class="mt-2 font-display text-lg font-bold uppercase">
@@ -172,6 +174,7 @@ interface Reveal {
                 @for (pair of pairs(); track pair.club) {
                   <li class="cut-sm flex items-center gap-3 bg-pitch py-2 pl-0 pr-3">
                     <span class="h-10 w-1.5" [style.background]="color(t, pair.club)"></span>
+                    <app-club-crest [club]="pair.club" [color]="color(t, pair.club)" size="1.75rem" />
                     <span class="w-28 font-display text-base font-extrabold uppercase italic">{{ pair.club }}</span>
                     <span class="flex-1 text-sm">
                       @for (name of pair.names; track name; let last = $last) {
@@ -192,6 +195,7 @@ interface Reveal {
           @for (team of t.teams; track team.id) {
             <li class="cut flex flex-wrap items-center gap-x-4 bg-pitch py-3 pl-0 pr-4">
               <span class="h-14 w-2" [style.background]="color(t, team.club)"></span>
+              <app-club-crest [club]="team.club" [color]="color(t, team.club)" size="2.75rem" />
               <div class="min-w-0 flex-1">
                 <p class="heading text-2xl">{{ team.club }}</p>
                 <p class="text-sm text-mist">
