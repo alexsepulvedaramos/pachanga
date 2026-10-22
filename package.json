@@ -6,9 +6,10 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
+    "test": "npm run build:notify && ng test",
     "update:clubs": "node --no-warnings scripts/update-club-ratings.ts",
-    "build:notify": "esbuild supabase/functions/notify/messages.ts --bundle --format=esm --platform=neutral --outfile=supabase/functions/notify/domain.js"
+    "build:notify": "esbuild supabase/functions/notify/messages.ts --bundle --format=esm --platform=neutral --outfile=supabase/functions/notify/domain.js",
+    "e2e": "playwright test"
   },
   "private": true,
   "packageManager": "npm@11.11.0",
@@ -31,6 +32,7 @@
     "@angular/build": "^22.2.3",
     "@angular/cli": "^22.2.3",
     "@angular/compiler-cli": "^22.2.0",
+    "@playwright/test": "^1.56.1",
     "@resvg/resvg-js": "^2.6.2",
     "esbuild": "^0.28.2",
     "jsdom": "^30.0.0",

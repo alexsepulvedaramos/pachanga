@@ -152,5 +152,6 @@ out. To sync between devices, create a Supabase project, run the files in
 `src/app/config.ts`.
 
 ```bash
-npm test
+npm test        # unit tests (also rebuilds the notification bundle)
+npm run e2e     # whole flows in a phone-sized Chromium: names, a match, the vote, the gala, a rematch
 ```
