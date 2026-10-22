@@ -74,7 +74,7 @@ import { tournamentUrl } from '../../domain/share-text';
                   <div class="mb-8 flex items-center justify-between">
                     <p class="eyebrow text-xl text-cyan">{{ label(m) }}</p>
                     @if (m.status === 'live') {
-                      <span class="tag bg-flare px-4 text-lg text-ink"><span class="mr-2 inline-block size-2.5 animate-pulse-live bg-ink align-middle"></span>En juego</span>
+                      <span class="tag animate-pulse-live bg-flare px-4 text-lg text-ink">En juego</span>
                     }
                   </div>
                   <app-match-card [match]="m" [big]="true" />
