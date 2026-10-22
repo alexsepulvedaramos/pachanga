@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { ToastService } from './ui/toast.service';
 import { InstallBanner } from './ui/install-banner';
 import { ConfirmDialog } from './ui/confirm-dialog';
+import { AppUpdates } from './ui/app-updates';
 
 @Component({
   selector: 'app-root',
@@ -31,4 +32,8 @@ import { ConfirmDialog } from './ui/confirm-dialog';
 })
 export class App {
   protected readonly toasts = inject(ToastService);
+
+  constructor() {
+    inject(AppUpdates).start();
+  }
 }
