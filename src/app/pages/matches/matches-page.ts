@@ -85,7 +85,7 @@ import { rematchDraft } from '../../domain/rematch';
                 {{ phaseLabel(m) }} · {{ m.halfMinutes }} min/parte
               </p>
               @if (m.status === 'live') {
-                <span class="tag bg-flare text-ink"><span class="mr-1.5 inline-block size-1.5 animate-pulse-live bg-ink align-middle"></span>En juego</span>
+                <span class="tag animate-pulse-live bg-flare text-ink">En juego</span>
               } @else {
                 <span class="tag bg-line text-mist">Siguiente</span>
               }
