@@ -26,6 +26,7 @@ import { formatClock, formatDuration } from '../../ui/format';
 import { BallonDorPanel } from '../gala/ballon-dor-panel';
 import { ClubCrest } from '../../ui/club-crest';
 import { rematchDraft } from '../../domain/rematch';
+import { LeagueRecapViewer } from '../league/league-recap-viewer';
 
 @Component({
   selector: 'app-matches-page',
@@ -133,6 +134,9 @@ import { rematchDraft } from '../../domain/rematch';
           <section class="mt-8">
             <div class="flex items-center justify-between gap-3">
               <h2 class="eyebrow text-mist">{{ group.label }}</h2>
+              @if (group.phase === 'group' && t.groupRanking) {
+                <button type="button" class="eyebrow mr-auto text-gold hover:text-chalk" (click)="leagueRecap.show()">Ver resumen</button>
+              }
               @if (group.folded) {
                 <button type="button" class="eyebrow text-cyan hover:text-chalk" [attr.aria-expanded]="isOpen(group.phase)" (click)="toggleFold(group.phase)">
                   {{ isOpen(group.phase) ? 'Ocultar jugados' : 'Ver ' + group.folded + (group.folded === 1 ? ' jugado' : ' jugados') }}
@@ -217,6 +221,7 @@ export class MatchesPage {
 
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
+  protected readonly leagueRecap = inject(LeagueRecapViewer);
 
   constructor() {
     const timer = setInterval(() => this.now.set(Date.now()), 30_000);

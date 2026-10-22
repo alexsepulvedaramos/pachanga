@@ -8,6 +8,8 @@ import { ShareButtons } from '../../ui/share-buttons';
 import { invitationText, tournamentUrl } from '../../domain/share-text';
 import { Gala } from '../gala/gala';
 import { GalaViewer } from '../gala/gala-viewer';
+import { LeagueRecap } from '../league/league-recap';
+import { LeagueRecapViewer } from '../league/league-recap-viewer';
 import { IdentityGate } from '../../ui/identity-gate';
 
 /** Outline icons for the phone tab bar, drawn on a 24×24 grid. */
@@ -22,8 +24,8 @@ const ICONS = {
 
 @Component({
   selector: 'app-tournament-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Brand, StageBadge, ShareButtons, Gala, IdentityGate],
-  providers: [TournamentSession, GalaViewer],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Brand, StageBadge, ShareButtons, Gala, LeagueRecap, IdentityGate],
+  providers: [TournamentSession, GalaViewer, LeagueRecapViewer],
   template: `
     @if (session.loading()) {
       <div class="grid min-h-dvh place-items-center">
@@ -153,6 +155,8 @@ const ICONS = {
 
       @if (gala.mode()) {
         <app-gala />
+      } @else if (leagueRecap.open()) {
+        <app-league-recap />
       }
     }
   `,
@@ -160,6 +164,7 @@ const ICONS = {
 export class TournamentShell {
   protected readonly session = inject(TournamentSession);
   protected readonly gala = inject(GalaViewer);
+  protected readonly leagueRecap = inject(LeagueRecapViewer);
   private readonly toast = inject(ToastService);
 
   readonly id = input.required<string>();

@@ -46,6 +46,11 @@ their own phones or on the TV.
   never themselves) from their phone. Ballots stay secret in their own table; the vote closes when
   everybody has voted or the admin closes it. A ballot is cast by the phone holding that name, and
   the admin can delete one.
+- **Group stage recap.** When the last group match is entered, every screen shows a short
+  story-style break: the final table revealed from the bottom up with where each team goes, the
+  stage in numbers (best attack and defence, biggest win, top scorer) and the knockout ties or the
+  choice that comes first. The TV plays it through on its own; it can be seen again from the
+  fixtures.
 - **Closing gala**, full screen and story-style: how the night went, the champions, the Golden Boot
   and the Ballon d'Or from third to first, with a drumroll before each name. The admin starts it
   and moves through it from their phone while every phone and the TV follow along; anyone can
