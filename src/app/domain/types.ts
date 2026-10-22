@@ -123,6 +123,8 @@ export interface Tournament {
   groupRanking?: Id[];
   /** Id of the match currently being played, if any. */
   liveMatchId?: Id;
+  /** Names a phone has taken, written by the server: nobody else can pick them. */
+  claimed?: Id[];
   /** Ballon d'Or vote, written by the server as players vote. */
   ballonDor?: BallonDorState;
   /** Closing ceremony shown live on every screen, driven by the admin. */

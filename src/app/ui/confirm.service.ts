@@ -4,6 +4,8 @@ export interface ConfirmRequest {
   title: string;
   message: string;
   confirmLabel: string;
+  /** Label of the other choice, "Cancelar" unless given. */
+  cancelLabel?: string;
   /** Destructive actions get the red button. */
   danger?: boolean;
 }

@@ -29,6 +29,12 @@ export class VoteTakenError extends Error {
   }
 }
 
+export class NameTakenError extends Error {
+  constructor() {
+    super('Ese nombre ya lo tiene otro móvil. Si es tuyo, pide al admin que lo libere.');
+  }
+}
+
 export class VotingClosedError extends Error {
   constructor() {
     super('La votación ya está cerrada.');
@@ -62,6 +68,16 @@ export abstract class TournamentRepository {
 
   /** Deletes a tournament for everyone. Needs the admin PIN. */
   abstract delete(id: string, pin: string): Promise<void>;
+
+  /**
+   * Takes a name for the phone holding `token`, letting go of any other name it had. Throws
+   * NameTakenError if another phone holds it.
+   */
+  abstract claim(id: string, participantId: string, token: string): Promise<void>;
+  /** The phone holding a name lets it go, optionally deleting the ballot it cast under it. */
+  abstract release(id: string, participantId: string, token: string, dropVote: boolean): Promise<void>;
+  /** Frees a name whatever phone holds it. Needs the admin PIN. */
+  abstract adminRelease(id: string, pin: string, participantId: string): Promise<void>;
 
   /**
    * Casts or changes a participant's Ballon d'Or podium. The first ballot is tied to `token`, kept

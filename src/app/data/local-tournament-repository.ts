@@ -4,6 +4,7 @@ import { ballonDorState, validateVote, votingOpen } from '../domain/ballon-dor';
 import {
   ConflictError,
   hashPin,
+  NameTakenError,
   StoredTournament,
   TournamentRepository,
   VoteTakenError,
@@ -15,10 +16,36 @@ interface LocalRecord extends StoredTournament {
   pinHash: string;
   /** Secret Ballon d'Or ballots, with the token of the phone that cast each. */
   ballots?: (BallonDorVote & { token: string })[];
+  /** Which phone holds each name taken. */
+  claims?: { participantId: string; token: string }[];
 }
 
 const PREFIX = 'pachanga:tournament:';
 const key = (id: string) => `${PREFIX}${id}`;
+
+/** The claims once `token` takes a name, letting go of any other it had, like the server does. */
+function takeName(record: LocalRecord, participantId: string, token: string): LocalRecord['claims'] & {} {
+  if (!record.tournament.participants.some((p) => p.id === participantId)) {
+    throw new Error('Ese nombre no está en el torneo.');
+  }
+  const claims = record.claims ?? [];
+  const owner = claims.find((c) => c.participantId === participantId);
+  if (owner && owner.token !== token) throw new NameTakenError();
+  return [...claims.filter((c) => c.token !== token), { participantId, token }];
+}
+
+/** Same as the server: the public state lists the names taken, not by whom. */
+function withClaims(record: LocalRecord, claims: LocalRecord['claims'] & {}): LocalRecord {
+  const claimed = claims.map((c) => c.participantId).sort();
+  return { ...record, claims, tournament: { ...record.tournament, claimed }, version: record.version + 1 };
+}
+
+/** Same as the server: the public state shows who voted, and every ballot once closed. */
+function withBallots(record: LocalRecord, ballots: LocalRecord['ballots'] & {}, close: boolean): LocalRecord {
+  const votes = ballots.map(({ voterId, picks }) => ({ voterId, picks }));
+  const tournament = { ...record.tournament, ballonDor: ballonDorState(record.tournament, votes, close) };
+  return { ...record, tournament, ballots, version: record.version + 1 };
+}
 
 /**
  * Browser-only storage, used for the demo and when no backend is configured. Kept in session
@@ -60,27 +87,52 @@ export class LocalTournamentRepository extends TournamentRepository {
     }
   }
 
+  async claim(id: string, participantId: string, token: string): Promise<void> {
+    const record = this.read(id);
+    if (!record) throw new ConflictError();
+    this.write(withClaims(record, takeName(record, participantId, token)));
+  }
+
+  async release(id: string, participantId: string, token: string, dropVote: boolean): Promise<void> {
+    const record = this.read(id);
+    const claims = record?.claims ?? [];
+    if (!record || !claims.some((c) => c.participantId === participantId && c.token === token)) return;
+    let next = withClaims(record, claims.filter((c) => c.participantId !== participantId));
+    if (dropVote && votingOpen(next.tournament)) {
+      const ballots = (next.ballots ?? []).filter((b) => !(b.voterId === participantId && b.token === token));
+      next = withBallots(next, ballots, false);
+    }
+    this.write(next);
+  }
+
+  async adminRelease(id: string, pin: string, participantId: string): Promise<void> {
+    const record = this.read(id);
+    if (!record || !(await this.verifyPin(id, pin))) throw new WrongPinError();
+    this.write(withClaims(record, (record.claims ?? []).filter((c) => c.participantId !== participantId)));
+  }
+
   async castVote(id: string, voterId: string, picks: string[], token: string): Promise<void> {
     const record = this.read(id);
     if (!record || !votingOpen(record.tournament)) throw new VotingClosedError();
     validateVote(record.tournament, voterId, picks);
-    const ballots = record.ballots ?? [];
+    const claimed = withClaims(record, takeName(record, voterId, token));
+    const ballots = claimed.ballots ?? [];
     const previous = ballots.find((b) => b.voterId === voterId);
     if (previous && previous.token !== token) throw new VoteTakenError();
     const next = previous
       ? ballots.map((b) => (b === previous ? { ...b, picks } : b))
       : [...ballots, { voterId, picks, token }];
-    this.publish(record, next, false);
+    this.write(withBallots(claimed, next, false));
   }
 
   async closeVoting(id: string, pin: string): Promise<void> {
     const record = await this.adminRecord(id, pin);
-    this.publish(record, record.ballots ?? [], true);
+    this.write(withBallots(record, record.ballots ?? [], true));
   }
 
   async resetVote(id: string, pin: string, voterId: string): Promise<void> {
     const record = await this.adminRecord(id, pin);
-    this.publish(record, (record.ballots ?? []).filter((b) => b.voterId !== voterId), false);
+    this.write(withBallots(record, (record.ballots ?? []).filter((b) => b.voterId !== voterId), false));
   }
 
   private async adminRecord(id: string, pin: string): Promise<LocalRecord> {
@@ -88,13 +140,6 @@ export class LocalTournamentRepository extends TournamentRepository {
     if (!record || !(await this.verifyPin(id, pin))) throw new WrongPinError();
     if (!votingOpen(record.tournament)) throw new VotingClosedError();
     return record;
-  }
-
-  /** Same as the server: the public state shows who voted, and every ballot once closed. */
-  private publish(record: LocalRecord, ballots: LocalRecord['ballots'] & {}, close: boolean): void {
-    const votes = ballots.map(({ voterId, picks }) => ({ voterId, picks }));
-    const tournament = { ...record.tournament, ballonDor: ballonDorState(record.tournament, votes, close) };
-    this.write({ ...record, tournament, ballots, version: record.version + 1 });
   }
 
   /** Removes every tournament kept in this tab (used to keep a single demo at a time). */

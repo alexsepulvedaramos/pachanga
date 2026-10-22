@@ -39,18 +39,22 @@ their own phones or on the TV.
 - **Optional goal scorers** and a top scorers table.
 - **Ballon d'Or** (optional): when the final ends every player votes a podium (3, 2 and 1 points,
   never themselves) from their phone. Ballots stay secret in their own table; the vote closes when
-  everybody has voted or the admin closes it. A ballot is tied to the phone that cast it, and the
-  admin can delete one cast by an impostor.
+  everybody has voted or the admin closes it. A ballot is cast by the phone holding that name, and
+  the admin can delete one.
 - **Closing gala**, full screen and story-style: how the night went, the champions, the Golden Boot
   and the Ballon d'Or from third to first, with a drumroll before each name. The admin starts it
   and moves through it from their phone while every phone and the TV follow along; anyone can
   replay it afterwards.
-- **Your matches.** Each phone can say who is holding it: that player's matches are highlighted and
-  a panel says whether it's their turn, how many matches until theirs and roughly at what time.
+- **Your matches.** Opening a tournament asks who you are; each name belongs to one phone (tied to
+  a random token kept on it), so nobody can take someone else's name, and anyone else follows as
+  a guest. A name picked by mistake is let go from that phone (deleting the Ballon d'Or ballot cast
+  under it, if wanted) or freed by the admin. That player's matches are highlighted and a panel
+  says whether it's their turn, how many matches until theirs and roughly at what time.
 - **Push notifications.** Players can ask to be told when it's their turn, when they're up next,
   when they have to pick an opponent and who won. A database trigger calls a Supabase Edge
   Function on every change; it reuses the app's own domain code (bundled with esbuild) to work out
   who to notify and records what it sent so nothing is repeated.
+- **Rematch.** A finished tournament sets up the next one with the same players, clubs and rules.
 - **Share to the group chat.** The tournament link goes to WhatsApp, the phone's share sheet or the
   clipboard: offered right after creating the tournament, from the code in the header, and with the
   standings as text.

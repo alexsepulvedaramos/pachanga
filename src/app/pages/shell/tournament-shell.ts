@@ -8,10 +8,11 @@ import { ShareButtons } from '../../ui/share-buttons';
 import { invitationText, tournamentUrl } from '../../domain/share-text';
 import { Gala } from '../gala/gala';
 import { GalaViewer } from '../gala/gala-viewer';
+import { IdentityGate } from '../../ui/identity-gate';
 
 @Component({
   selector: 'app-tournament-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Brand, StageBadge, ShareButtons, Gala],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Brand, StageBadge, ShareButtons, Gala, IdentityGate],
   providers: [TournamentSession, GalaViewer],
   template: `
     @if (session.loading()) {
@@ -24,6 +25,8 @@ import { GalaViewer } from '../gala/gala-viewer';
         <p class="mt-3 text-mist">{{ error }}</p>
         <a routerLink="/" class="btn-secondary mt-8">Volver</a>
       </main>
+    } @else if (session.needsIdentity()) {
+      <app-identity-gate />
     } @else if (session.tournament(); as t) {
       <header class="sticky top-0 z-30 border-b border-line bg-ink/95 backdrop-blur">
         <div class="mx-auto flex max-w-5xl items-center gap-3 px-4 pt-3">

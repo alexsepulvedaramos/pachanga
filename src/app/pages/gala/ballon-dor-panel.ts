@@ -6,6 +6,8 @@ import { topScorers } from '../../domain/tournament';
 import { Id } from '../../domain/types';
 import { ConfirmService } from '../../ui/confirm.service';
 import { GalaViewer } from './gala-viewer';
+import { changeName } from '../../ui/identity-gate';
+import { PushNotifications } from '../../data/push-notifications';
 
 const PLACES = ['1º', '2º', '3º'];
 
@@ -54,14 +56,9 @@ const PLACES = ['1º', '2º', '3º'];
 
           <div class="mt-5 border-t border-line pt-5">
             @if (!session.me()) {
-              <p class="font-display text-lg font-bold uppercase">¿Quién eres?</p>
-              <p class="text-sm text-mist">Elige tu nombre para votar.</p>
-              <div class="mt-3 flex flex-wrap gap-1.5">
-                @for (p of t.participants; track p.id) {
-                  <button type="button" class="tag bg-line px-3 py-1.5 text-sm text-chalk hover:bg-raised" (click)="session.setMe(p.id)">
-                    {{ p.name }}
-                  </button>
-                }
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <p class="text-sm text-mist">Estás como invitado: solo votan los jugadores.</p>
+                <button type="button" class="tag bg-line text-chalk hover:bg-raised" (click)="session.setGuest(false)">Soy jugador</button>
               </div>
             } @else if (iVoted() && !editing()) {
               <div class="flex flex-wrap items-center justify-between gap-3">
@@ -81,13 +78,13 @@ const PLACES = ['1º', '2º', '3º'];
                 </div>
                 <div class="flex gap-2">
                   <button type="button" class="btn-secondary text-sm" (click)="edit()">Cambiar voto</button>
-                  <button type="button" class="tag bg-line text-mist hover:text-chalk" (click)="session.setMe(null)">No soy yo</button>
+                  <button type="button" class="tag bg-line text-mist hover:text-chalk" (click)="notMe()">No soy yo</button>
                 </div>
               </div>
             } @else {
               <div class="flex items-center justify-between gap-3">
                 <p class="eyebrow text-mist">Vota como {{ session.personName(session.me()!) }}</p>
-                <button type="button" class="tag bg-line text-mist hover:text-chalk" (click)="session.setMe(null)">No soy yo</button>
+                <button type="button" class="tag bg-line text-mist hover:text-chalk" (click)="notMe()">No soy yo</button>
               </div>
               <ol class="mt-3 grid grid-cols-3 gap-2">
                 @for (place of places; track place; let i = $index) {
@@ -182,6 +179,7 @@ export class BallonDorPanel {
   protected readonly session = inject(TournamentSession);
   protected readonly viewer = inject(GalaViewer);
   private readonly confirm = inject(ConfirmService);
+  private readonly push = inject(PushNotifications);
   protected readonly places = PLACES;
   protected readonly points = PODIUM_POINTS;
 
@@ -306,6 +304,10 @@ export class BallonDorPanel {
       danger: true,
     });
     if (ok) await this.session.resetVote(voterId);
+  }
+
+  protected notMe(): Promise<void> {
+    return changeName(this.session, this.confirm, this.push);
   }
 
   protected async startLive(): Promise<void> {

@@ -7,6 +7,7 @@ import {
   PinLockedError,
   StoredTournament,
   TournamentRepository,
+  NameTakenError,
   VoteTakenError,
   VotingClosedError,
   WrongPinError,
@@ -73,6 +74,37 @@ export class SupabaseTournamentRepository extends TournamentRepository {
     if (error) throw new Error('No se ha podido borrar. Revisa la conexión.');
     if (data === -1) throw new WrongPinError();
     if (data === -3) throw new PinLockedError();
+  }
+
+  async claim(id: string, participantId: string, token: string): Promise<void> {
+    const { data, error } = await this.client.rpc('claim_participant', {
+      p_id: id,
+      p_participant: participantId,
+      p_token: token,
+    });
+    if (error) throw new Error('No se ha podido elegir el nombre. Revisa la conexión.');
+    if (data === -6) throw new NameTakenError();
+    if (data !== 1) throw new Error('Ese nombre no está en el torneo.');
+  }
+
+  async release(id: string, participantId: string, token: string, dropVote: boolean): Promise<void> {
+    const { error } = await this.client.rpc('release_participant', {
+      p_id: id,
+      p_participant: participantId,
+      p_token: token,
+      p_drop_vote: dropVote,
+    });
+    if (error) throw new Error('No se ha podido cambiar de nombre. Revisa la conexión.');
+  }
+
+  async adminRelease(id: string, pin: string, participantId: string): Promise<void> {
+    const { data, error } = await this.client.rpc('admin_release_participant', {
+      p_id: id,
+      p_pin: pin,
+      p_participant: participantId,
+    });
+    if (error) throw new Error('No se ha podido liberar el nombre. Revisa la conexión.');
+    this.checkAdminCode(data as number);
   }
 
   async castVote(id: string, voterId: string, picks: string[], token: string): Promise<void> {

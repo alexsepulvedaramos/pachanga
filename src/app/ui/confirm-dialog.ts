@@ -19,7 +19,7 @@ import { ConfirmService } from './confirm.service';
           <h2 id="confirm-title" class="heading text-3xl">{{ request.title }}</h2>
           <p id="confirm-message" class="mt-2 text-mist">{{ request.message }}</p>
           <div class="mt-6 flex justify-end gap-2">
-            <button #cancel type="button" class="btn-secondary" (click)="confirm.answer(false)">Cancelar</button>
+            <button #cancel type="button" class="btn-secondary" (click)="confirm.answer(false)">{{ request.cancelLabel ?? 'Cancelar' }}</button>
             <button type="button" [class]="request.danger ? 'btn-danger' : 'btn-primary'" (click)="confirm.answer(true)">
               {{ request.confirmLabel }}
             </button>

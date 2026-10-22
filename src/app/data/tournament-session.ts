@@ -4,6 +4,7 @@ import { Rng } from '../domain/rng';
 import { TournamentStore } from './tournament-store';
 import {
   ConflictError,
+  NameTakenError,
   PinLockedError,
   TournamentRepository,
   WrongPinError,
@@ -30,8 +31,14 @@ export class TournamentSession {
   readonly saving = signal(false);
   readonly pin = signal<string | null>(null);
   readonly isAdmin = computed(() => this.pin() !== null);
-  /** Who is using this device, chosen by them; remembered per tournament. */
+  /** Who is using this device: a name only this phone holds. Remembered per tournament. */
   readonly me = signal<Id | null>(null);
+  /** This phone follows the tournament without a name: it can't vote or get turn notices. */
+  readonly guest = signal(false);
+  /** Neither a name nor a guest yet: the phone has to say who it is first. */
+  readonly needsIdentity = computed(() => !!this.tournament() && !this.me() && !this.guest());
+  /** Names some phone holds. */
+  readonly claimed = computed(() => new Set(this.tournament()?.claimed ?? []));
 
   readonly teams = computed(() => new Map((this.tournament()?.teams ?? []).map((t) => [t.id, t])));
   readonly people = computed(
@@ -78,8 +85,10 @@ export class TournamentSession {
       this.version = stored.version;
       this.tournament.set(stored.tournament);
       this.pin.set(this.store.savedPin(id));
+      this.guest.set(this.store.isGuest(id));
       const me = this.store.savedIdentity(id);
       this.me.set(me && stored.tournament.participants.some((p) => p.id === me) ? me : null);
+      void this.keepName();
       this.stopWatching = (await this.store.repo(id)).watch(
         id,
         (next) => {
@@ -107,11 +116,77 @@ export class TournamentSession {
     return ok;
   }
 
-  setMe(participantId: Id | null): void {
+  private setMe(participantId: Id | null): void {
     const t = this.tournament();
     if (!t) return;
     this.store.rememberIdentity(t.id, participantId);
     this.me.set(participantId);
+  }
+
+  /** Takes a name for this phone (letting go of any other it had). False if another phone has it. */
+  async claim(participantId: Id): Promise<boolean> {
+    const t = this.tournament();
+    if (!t) return false;
+    try {
+      await (await this.store.repo(t.id)).claim(t.id, participantId, this.store.deviceToken(t.id));
+      this.setMe(participantId);
+      this.setGuest(false);
+      await this.refresh();
+      return true;
+    } catch (error) {
+      this.toast.error(error);
+      return false;
+    }
+  }
+
+  /** Lets go of this phone's name, and with `dropVote` of the ballot it cast under it. */
+  async leaveName(dropVote: boolean): Promise<boolean> {
+    const t = this.tournament();
+    const me = this.me();
+    if (!t || !me) return false;
+    try {
+      await (await this.store.repo(t.id)).release(t.id, me, this.store.deviceToken(t.id), dropVote);
+      if (dropVote) this.store.rememberBallot(t.id, me, null);
+      this.setMe(null);
+      await this.refresh();
+      return true;
+    } catch (error) {
+      this.toast.error(error);
+      return false;
+    }
+  }
+
+  /** Follow the tournament without a name, or (false) go back to picking one. */
+  setGuest(guest: boolean): void {
+    const t = this.tournament();
+    if (!t) return;
+    this.store.rememberGuest(t.id, guest);
+    this.guest.set(guest);
+  }
+
+  /** Frees a name whatever phone holds it, e.g. for someone who changed phones. */
+  async releaseName(participantId: Id): Promise<boolean> {
+    return this.adminCall((repo, id, pin) => repo.adminRelease(id, pin, participantId));
+  }
+
+  /**
+   * A name remembered from before names were exclusive, or from a reload: takes it if it's free,
+   * and forgets it if another phone has it.
+   */
+  private async keepName(): Promise<void> {
+    const t = this.tournament();
+    const me = this.me();
+    if (!t || !me) return;
+    try {
+      await (await this.store.repo(t.id)).claim(t.id, me, this.store.deviceToken(t.id));
+      await this.refresh();
+    } catch (error) {
+      if (error instanceof NameTakenError) {
+        this.setMe(null);
+        this.toast.error(`${this.personName(me)} ya está en otro móvil: elige quién eres.`);
+      }
+      // offline: keep the name for now, the server will check it when it matters
+    }
   }
 
   lock(): void {
@@ -182,7 +257,7 @@ export class TournamentSession {
     if (!t || !me) return false;
     try {
       validateVote(t, me, picks);
-      await (await this.store.repo(t.id)).castVote(t.id, me, picks, this.store.voteToken(t.id));
+      await (await this.store.repo(t.id)).castVote(t.id, me, picks, this.store.deviceToken(t.id));
       this.store.rememberBallot(t.id, me, picks);
       await this.refresh();
       return true;

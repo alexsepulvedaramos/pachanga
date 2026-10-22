@@ -22,6 +22,7 @@ function fakeServer(initial: Tournament) {
     repo: async () => repo,
     savedPin: () => '0000',
     savedIdentity: () => null,
+    isGuest: () => false,
   };
   return { server, store };
 }
