@@ -76,7 +76,8 @@ const SLIDE_MS: Record<GalaSlide['kind'], number> = {
           </div>
         </div>
 
-        @for (slide of shown(); track key()) {
+        @for (k of keys(); track k) {
+          @let slide = current()!;
           <section class="absolute inset-0 flex flex-col items-center justify-center px-6 pb-28 pt-24 text-center" aria-live="polite">
             @switch (slide.kind) {
               @case ('intro') {
@@ -187,9 +188,11 @@ export class Gala implements OnInit, OnDestroy {
   protected readonly finished = signal(false);
   protected readonly paused = computed(() => this.live() || this.finished());
   protected readonly current = computed<GalaSlide | null>(() => this.slides()[this.index()] ?? null);
-  /** The current slide in a one-item list, so it is rebuilt (and animates in) on every change. */
-  protected readonly shown = computed(() => (this.current() ? [this.current()!] : []));
-  protected readonly key = computed(() => `${this.viewer.mode()}:${this.index()}`);
+  /**
+   * The current slide's key in a one-item list, tracked by itself, so every slide is built afresh
+   * (and animates in) even when it is the same kind as the one before.
+   */
+  protected readonly keys = computed(() => (this.current() ? [`${this.viewer.mode()}:${this.index()}`] : []));
   constructor() {
     // Replays start from the beginning.
     effect(() => {
