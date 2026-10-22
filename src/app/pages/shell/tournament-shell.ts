@@ -6,6 +6,7 @@ import { ToastService } from '../../ui/toast.service';
 import { StageBadge, stageLabel } from '../../ui/stage-badge';
 import { ShareButtons } from '../../ui/share-buttons';
 import { invitationText, tournamentUrl } from '../../domain/share-text';
+import { DEMO_PREFIX } from '../../data/tournament-repository';
 import { Gala } from '../gala/gala';
 import { GalaViewer } from '../gala/gala-viewer';
 import { LeagueRecap } from '../league/league-recap';
@@ -89,6 +90,9 @@ const ICONS = {
             <p class="text-sm text-mist">
               Código <span class="font-display text-lg font-bold tracking-[0.2em] text-chalk">{{ t.id }}</span> · con el enlace cada uno ve los partidos y cuándo le toca.
             </p>
+            @if (isDemo()) {
+              <p class="mt-1 text-sm text-flare">Es una demo: solo existe en este navegador, así que el enlace no abre nada en otro móvil.</p>
+            }
             <div class="mt-2 flex flex-wrap gap-2">
               <app-share-buttons [text]="invitation()" [url]="link()" [title]="t.name" />
               <a [routerLink]="['/t', t.id, 'tv']" class="btn-secondary sm:hidden">Modo TV</a>
@@ -176,6 +180,8 @@ export class TournamentShell {
 
   protected readonly unlocking = signal(false);
   protected readonly sharing = signal(false);
+  /** Demos live in this browser only: a link to one opens nothing elsewhere. */
+  protected readonly isDemo = computed(() => !!this.session.tournament()?.id.startsWith(DEMO_PREFIX));
   protected readonly link = computed(() => {
     const t = this.session.tournament();
     return t ? tournamentUrl(location.origin, t) : '';

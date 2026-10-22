@@ -46,8 +46,12 @@ export class VotingClosedError extends Error {
 }
 
 export class NotFoundError extends Error {
-  constructor() {
-    super('No existe ningún torneo con ese código.');
+  constructor(id = '') {
+    super(
+      id.startsWith(DEMO_PREFIX)
+        ? 'Las demos solo existen en el navegador donde se abrieron. Para seguir un torneo desde otro móvil, crea uno de verdad.'
+        : 'No existe ningún torneo con ese código.',
+    );
   }
 }
 

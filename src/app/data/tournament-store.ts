@@ -55,7 +55,7 @@ export class TournamentStore {
 
   async load(id: string): Promise<StoredTournament> {
     const stored = await (await this.repo(id)).load(id);
-    if (!stored) throw new NotFoundError();
+    if (!stored) throw new NotFoundError(id);
     this.remember({ id, name: stored.tournament.name });
     return stored;
   }
