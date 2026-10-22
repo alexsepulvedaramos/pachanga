@@ -35,11 +35,12 @@ export function newTournament(id: string, config: Partial<TournamentConfig> = {}
   return finishDraw(t, rng);
 }
 
-/** Plays every match, home side winning 2–1 with its first member scoring the home goals. */
-export function playAll(t: Tournament): Tournament {
+/** Plays every match (or the first few), home side winning 2–1 with its first member scoring the home goals. */
+export function playAll(t: Tournament, count = Infinity): Tournament {
   const rng = seededRng(6);
   let next = t;
-  for (let guard = 0; guard < 100 && next.stage !== 'finished'; guard++) {
+  let played = 0;
+  for (let guard = 0; guard < 100 && next.stage !== 'finished' && played < count; guard++) {
     const decision = currentDecision(next);
     if (decision) {
       if (decision.kind === 'playoffOpponent') next = makeChoice(next, { playoffOpponentId: decision.options[0] });
@@ -56,6 +57,7 @@ export function playAll(t: Tournament): Tournament {
       awayGoals: 1,
       goals: next.config.trackScorers ? [{ teamId: m.homeId, scorerId: scorer }, { teamId: m.homeId, scorerId: scorer }] : [],
     });
+    played++;
   }
   return next;
 }

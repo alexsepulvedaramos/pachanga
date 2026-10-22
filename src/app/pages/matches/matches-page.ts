@@ -131,9 +131,17 @@ import { rematchDraft } from '../../domain/rematch';
         <!-- Fixture -->
         @for (group of fixture(); track group.phase) {
           <section class="mt-8">
-            <h2 class="eyebrow text-mist">{{ group.label }}</h2>
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="eyebrow text-mist">{{ group.label }}</h2>
+              @if (group.folded) {
+                <button type="button" class="eyebrow text-cyan hover:text-chalk" [attr.aria-expanded]="isOpen(group.phase)" (click)="toggleFold(group.phase)">
+                  {{ isOpen(group.phase) ? 'Ocultar jugados' : 'Ver ' + group.folded + (group.folded === 1 ? ' jugado' : ' jugados') }}
+                </button>
+              }
+            </div>
             <ol class="mt-2 divide-y divide-line/60">
               @for (row of group.rows; track row.match.id) {
+                @if (!row.foldable || isOpen(group.phase)) {
                 <li>
                   <div
                     class="grid grid-cols-[2rem_1fr_auto_1fr_2rem] items-center gap-2 border-l-4 py-2.5 pl-1"
@@ -175,6 +183,7 @@ import { rematchDraft } from '../../domain/rematch';
                     <app-match-summary [match]="row.match" />
                   }
                 </li>
+                }
               }
             </ol>
           </section>
@@ -198,6 +207,8 @@ export class MatchesPage {
   protected readonly editing = signal<Id | null>(null);
   /** Finished match whose summary is open. */
   protected readonly expanded = signal<Id | null>(null);
+  /** Phases whose played matches are shown in full. */
+  private readonly unfolded = signal<ReadonlySet<Phase>>(new Set());
   protected readonly editingMatch = computed(() => {
     const id = this.editing();
     return id ? (this.session.tournament()?.matches.find((m) => m.id === id) ?? null) : null;
@@ -241,18 +252,25 @@ export class MatchesPage {
     const order: Phase[] = ['group', 'playoff', 'quarter', 'semi', 'third', 'final'];
     let number = 0;
     const me = this.session.me();
+    // Played matches fold away while the tournament goes on, all but the latest result.
+    const latest = t.stage === 'finished' ? null : [...t.matches].reverse().find((m) => m.status === 'done');
     const numbered = t.matches.map((match) => ({
       match,
       number: ++number,
       winner: this.winner(match),
       mine: !!me && playsIn(t, match, me),
+      foldable: !!latest && match.status === 'done' && match.id !== latest.id,
     }));
     return order
-      .map((phase) => ({
-        phase,
-        label: phase === 'group' ? 'Liguilla' : PHASE_LABELS[phase],
-        rows: numbered.filter((r) => r.match.phase === phase),
-      }))
+      .map((phase) => {
+        const rows = numbered.filter((r) => r.match.phase === phase);
+        return {
+          phase,
+          label: phase === 'group' ? 'Liguilla' : PHASE_LABELS[phase],
+          rows,
+          folded: rows.filter((r) => r.foldable).length,
+        };
+      })
       .filter((g) => g.rows.length > 0);
   });
 
@@ -299,6 +317,18 @@ export class MatchesPage {
 
   protected async redraw(matchId: Id, teamId: Id): Promise<void> {
     await this.session.apply((t, rng) => redrawStandIn(t, matchId, teamId, rng));
+  }
+
+  protected isOpen(phase: Phase): boolean {
+    return this.unfolded().has(phase);
+  }
+
+  protected toggleFold(phase: Phase): void {
+    this.unfolded.update((open) => {
+      const next = new Set(open);
+      if (!next.delete(phase)) next.add(phase);
+      return next;
+    });
   }
 
   protected toggleSummary(m: Match): void {

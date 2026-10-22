@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { newTournament, openWith, pickName } from './fixtures';
+import { newTournament, openWith, pickName, playAll } from './fixtures';
 
 test('a player picks their name and the admin plays a match', async ({ page }) => {
   const t = newTournament('DEMOMATCH');
@@ -68,4 +68,18 @@ test('a player starts their match and enters its result from their phone', async
   await expect(row).toContainText('1–2');
   await row.getByRole('button').first().click();
   await expect(page.getByText(`Resultado metido por ${player}.`)).toBeVisible();
+});
+
+test('played matches fold away, all but the latest result', async ({ page }) => {
+  const t = playAll(newTournament('DEMOFOLD'), 3);
+  await openWith(page, t);
+  await pickName(page, 'Ana');
+
+  const rows = page.locator('ol li');
+  await expect(rows).toHaveCount(t.matches.length - 2);
+  await expect(rows.first()).toContainText('2–1');
+  await page.getByRole('button', { name: 'Ver 2 jugados' }).click();
+  await expect(rows).toHaveCount(t.matches.length);
+  await page.getByRole('button', { name: 'Ocultar jugados' }).click();
+  await expect(rows).toHaveCount(t.matches.length - 2);
 });
