@@ -7,6 +7,7 @@ const PATHS = {
   pencil: 'M4 20l1-4.5L16 4.5l3.5 3.5-11 11ZM14 7l3.5 3.5',
   check: 'M5 12.5l4.5 4.5L19 7',
   close: 'M6 6l12 12M18 6 6 18',
+  back: 'M19 12H5M11 6l-6 6 6 6',
 };
 
 export type IconName = keyof typeof PATHS;
