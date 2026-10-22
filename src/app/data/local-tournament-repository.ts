@@ -12,6 +12,7 @@ import {
   VotingClosedError,
   WrongPinError,
 } from './tournament-repository';
+import { demoBallots } from './demo-ballots';
 
 interface LocalRecord extends StoredTournament {
   pinHash: string;
@@ -46,6 +47,18 @@ function withBallots(record: LocalRecord, ballots: LocalRecord['ballots'] & {}, 
   const votes = ballots.map(({ voterId, picks }) => ({ voterId, picks }));
   const tournament = { ...record.tournament, ballonDor: ballonDorState(record.tournament, votes, close) };
   return { ...record, tournament, ballots, version: record.version + 1 };
+}
+
+/**
+ * In a demo, the made-up players cast their Ballon d'Or ballots as soon as the vote opens, leaving
+ * only the names someone has taken to vote.
+ */
+function withDemoVoters(record: LocalRecord): LocalRecord {
+  const t = record.tournament;
+  if (!t.demo || record.ballots || !votingOpen(t)) return record;
+  const votes = demoBallots(t, t.claimed ?? []);
+  const ballots = votes.map((v) => ({ ...v, token: 'demo' }));
+  return { ...record, ballots, tournament: { ...t, ballonDor: ballonDorState(t, votes, false) } };
 }
 
 /**
@@ -203,6 +216,6 @@ export class LocalTournamentRepository extends TournamentRepository {
   }
 
   private write(record: LocalRecord): void {
-    sessionStorage.setItem(key(record.tournament.id), JSON.stringify(record));
+    sessionStorage.setItem(key(record.tournament.id), JSON.stringify(withDemoVoters(record)));
   }
 }

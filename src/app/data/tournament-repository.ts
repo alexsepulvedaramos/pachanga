@@ -1,4 +1,7 @@
 import { KnockoutChoices, Tournament } from '../domain/types';
+
+/** Tournament codes for demos, which live in the browser only. */
+export const DEMO_PREFIX = 'DEMO';
 import { MatchResult } from '../domain/tournament';
 
 export interface StoredTournament {
