@@ -1,17 +1,15 @@
 import { Component, computed, effect, inject, OnDestroy, OnInit, signal, untracked } from '@angular/core';
 import { TournamentSession } from '../../data/tournament-session';
 import { galaLive, GalaSlide, galaSlides, setGalaStep } from '../../domain/gala';
-import { topScorers } from '../../domain/tournament';
 import { Id, Match } from '../../domain/types';
 import { clubColor } from '../../ui/club-colors';
 import { ClubCrest } from '../../ui/club-crest';
 import { Confetti } from '../../ui/confetti';
 import { CountUp } from '../../ui/count-up';
 import { GalaViewer } from './gala-viewer';
+import { Walkout, walkoutMs } from './walkout';
 
-const GOLD = ['#ffc83d', '#ffb703', '#fff3c4', '#f2f5ff'];
-
-/** How long each kind of slide stays up when replayed, after any suspense. */
+/** How long each kind of slide stays up when replayed, after any walkout. */
 const SLIDE_MS: Record<GalaSlide['kind'], number> = {
   intro: 6500,
   champions: 7000,
@@ -19,8 +17,6 @@ const SLIDE_MS: Record<GalaSlide['kind'], number> = {
   ballonDor: 6000,
 };
 
-/** Drumroll before a Ballon d'Or name comes out, longer for the winner. */
-const SUSPENSE_MS = { 3: 2200, 2: 2800, 1: 4200 } as const;
 
 /**
  * Closing ceremony, full screen and story-style: how the night went, the champions, the Golden
@@ -29,7 +25,7 @@ const SUSPENSE_MS = { 3: 2200, 2: 2800, 1: 4200 } as const;
  */
 @Component({
   selector: 'app-gala',
-  imports: [Confetti, CountUp, ClubCrest],
+  imports: [Confetti, CountUp, ClubCrest, Walkout],
   host: {
     '(document:keydown.arrowright)': 'next()',
     '(document:keydown.space)': '$event.preventDefault(); next()',
@@ -138,44 +134,7 @@ const SUSPENSE_MS = { 3: 2200, 2: 2800, 1: 4200 } as const;
               }
 
               @case ('ballonDor') {
-                @if (!revealed()) {
-                  <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_45%,#ffc83d22,var(--color-ink)_60%)]"></div>
-                  <p class="eyebrow animate-rise text-gold">Balón de Oro</p>
-                  <p class="heading mt-2 animate-rise text-[clamp(2.5rem,11vw,6rem)]">{{ placeLabel(slide.place) }}</p>
-                  <p class="mt-10 animate-suspense text-[clamp(5rem,22vw,11rem)] leading-none" aria-hidden="true">⚽</p>
-                  <p class="mt-8 animate-pulse-live font-display text-xl font-bold uppercase tracking-[0.3em] text-mist">
-                    {{ slide.place === 1 ? 'Y el Balón de Oro es para…' : 'Es para…' }}
-                  </p>
-                } @else {
-                  @if (slide.place === 1) {
-                    <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_40%,#ffc83d66,#3d2a00_55%,var(--color-ink)_90%)]"></div>
-                    <app-confetti [colors]="gold" [rain]="true" [amount]="220" />
-                  } @else {
-                    <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_40%,#ffc83d26,var(--color-ink)_65%)]"></div>
-                    <app-confetti [colors]="gold" [amount]="slide.place === 2 ? 90 : 50" />
-                  }
-                  <p class="eyebrow animate-rise text-gold">{{ slide.place === 1 ? 'Balón de Oro' : 'Balón de Oro · ' + placeLabel(slide.place) }}</p>
-                  @if (slide.place === 1) {
-                    <p class="mt-2 animate-pop text-[clamp(4rem,16vw,8rem)] leading-none" aria-hidden="true">🏅</p>
-                  } @else {
-                    <p class="heading mt-2 animate-pop text-[clamp(4rem,18vw,9rem)] text-chalk/30">{{ slide.place }}º</p>
-                  }
-                  <h2
-                    class="heading mt-2 animate-flip-in text-[clamp(3.5rem,17vw,11rem)] [animation-delay:200ms]"
-                    [class]="slide.place === 1 ? 'gold-text animate-shine' : ''"
-                  >
-                    {{ session.personName(slide.participantId) }}
-                  </h2>
-                  <p class="mt-3 flex animate-rise items-center justify-center gap-2 font-display text-[clamp(1.25rem,5vw,2.25rem)] font-bold uppercase text-mist [animation-delay:700ms]">
-                    @if (clubOf(slide.participantId); as club) {
-                      <app-club-crest [club]="club" [color]="colorOfClub(club)" size="1.4em" />
-                    }
-                    {{ detail(slide.participantId) }}
-                  </p>
-                  <p class="heading mt-6 animate-rise text-[clamp(2.5rem,10vw,5rem)] text-gold [animation-delay:1000ms]">
-                    <app-count-up [value]="slide.points" [delay]="1000" [duration]="1500" /> puntos
-                  </p>
-                }
+                <app-walkout [slide]="slide" />
               }
             }
           </section>
@@ -207,7 +166,6 @@ const SUSPENSE_MS = { 3: 2200, 2: 2800, 1: 4200 } as const;
 export class Gala implements OnInit, OnDestroy {
   protected readonly session = inject(TournamentSession);
   protected readonly viewer = inject(GalaViewer);
-  protected readonly gold = GOLD;
 
   protected readonly slides = computed(() => {
     const t = this.session.tournament();
@@ -232,24 +190,7 @@ export class Gala implements OnInit, OnDestroy {
   /** The current slide in a one-item list, so it is rebuilt (and animates in) on every change. */
   protected readonly shown = computed(() => (this.current() ? [this.current()!] : []));
   protected readonly key = computed(() => `${this.viewer.mode()}:${this.index()}`);
-  /** Whether the name on a Ballon d'Or slide is out, after the drumroll. */
-  protected readonly revealed = signal(false);
-  private suspense: ReturnType<typeof setTimeout> | undefined;
-
   constructor() {
-    effect(() => {
-      this.key();
-      const slide = this.current();
-      untracked(() => {
-        clearTimeout(this.suspense);
-        this.revealed.set(slide?.kind !== 'ballonDor');
-        if (slide?.kind !== 'ballonDor') return;
-        this.suspense = setTimeout(() => {
-          this.revealed.set(true);
-          navigator.vibrate?.(slide.place === 1 ? [120, 60, 120, 60, 400] : [150]);
-        }, SUSPENSE_MS[slide.place]);
-      });
-    });
     // Replays start from the beginning.
     effect(() => {
       if (this.viewer.mode() === 'replay') untracked(() => this.restart());
@@ -261,12 +202,11 @@ export class Gala implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    clearTimeout(this.suspense);
     document.body.style.overflow = '';
   }
 
   protected durationOf(slide: GalaSlide): number {
-    return SLIDE_MS[slide.kind] + (slide.kind === 'ballonDor' ? SUSPENSE_MS[slide.place] : 0);
+    return SLIDE_MS[slide.kind] + (slide.kind === 'ballonDor' ? walkoutMs(slide.place) : 0);
   }
 
   protected tap(event: MouseEvent): void {
@@ -318,27 +258,5 @@ export class Gala implements OnInit, OnDestroy {
   protected score(m: Match): string {
     const pens = m.homePens != null && m.awayPens != null ? ` (pen. ${m.homePens}–${m.awayPens})` : '';
     return `${this.session.teamName(m.homeId)} ${m.homeGoals}–${m.awayGoals} ${this.session.teamName(m.awayId)}${pens}`;
-  }
-
-  protected placeLabel(place: 1 | 2 | 3): string {
-    return place === 1 ? 'Ganador' : place === 2 ? '2º puesto' : '3er puesto';
-  }
-
-  protected clubOf(participantId: Id): string {
-    return this.session.tournament()?.teams.find((x) => x.memberIds.includes(participantId))?.club ?? '';
-  }
-
-  protected colorOfClub(club: string): string {
-    return clubColor(this.session.tournament()?.clubs ?? [], club);
-  }
-
-  /** Club and, if scorers are tracked, goals of a Ballon d'Or nominee. */
-  protected detail(participantId: Id): string {
-    const t = this.session.tournament();
-    if (!t) return '';
-    const club = this.clubOf(participantId);
-    if (!t.config.trackScorers) return club;
-    const goals = topScorers(t).find((s) => s.participantId === participantId)?.goals ?? 0;
-    return `${club} · ${goals} ${goals === 1 ? 'gol' : 'goles'}`;
   }
 }

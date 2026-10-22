@@ -9,7 +9,7 @@ import {
   votingClosed,
   votingOpen,
 } from './ballon-dor';
-import { galaLive, galaReady, galaSlides, setGalaStep, startGala } from './gala';
+import { galaLive, galaReady, galaSlides, playerRecord, setGalaStep, startGala } from './gala';
 import { podium } from './knockout';
 import { Rng, seededRng } from './rng';
 import {
@@ -168,7 +168,7 @@ describe('gala', () => {
       'ballonDor1',
     ]);
     const winner = slides[slides.length - 1];
-    expect(winner).toMatchObject({ participantId: 'p2', points: 6 });
+    expect(winner).toMatchObject({ participantId: 'p2', points: 6, firsts: 2, ballots: 2 });
     const intro = slides[0];
     expect(intro).toMatchObject({ kind: 'intro', matches: t.matches.length, goals: t.matches.length });
   });
@@ -188,6 +188,17 @@ describe('gala', () => {
   it('leaves out the Golden Boot without scorers and the Ballon d’Or without a vote', () => {
     const t = finished({ ballonDor: false, trackScorers: false });
     expect(galaSlides(t).map((s) => s.kind)).toEqual(['intro', 'champions']);
+  });
+
+  it('counts the matches each player played and won, stand-ins included', () => {
+    const t = finished({ ballonDor: false });
+    const total = t.participants.reduce((sum, p) => sum + playerRecord(t, p.id).played, 0);
+    // Every match has two sides of two players (one of them may be a stand-in).
+    expect(total).toBe(t.matches.length * 4);
+    const champion = galaSlides(t).find((s) => s.kind === 'champions');
+    const record = playerRecord(t, champion && champion.kind === 'champions' ? champion.playerIds[0] : 'p1');
+    expect(record.wins).toBeGreaterThan(0);
+    expect(record.wins).toBeLessThanOrEqual(record.played);
   });
 
   it('is live until the admin moves past the last slide', () => {
