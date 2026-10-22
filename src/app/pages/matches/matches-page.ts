@@ -23,10 +23,11 @@ import {
   totalMatchCount,
 } from '../../domain/tournament';
 import { formatClock, formatDuration } from '../../ui/format';
+import { BallonDorPanel } from '../gala/ballon-dor-panel';
 
 @Component({
   selector: 'app-matches-page',
-  imports: [MatchCard, DecisionPanel, ResultForm, MatchSummary, Modal, RouterLink, MyTurnPanel],
+  imports: [MatchCard, DecisionPanel, ResultForm, MatchSummary, Modal, RouterLink, MyTurnPanel, BallonDorPanel],
   template: `
     @if (session.tournament(); as t) {
       @if (t.stage === 'draw') {
@@ -65,6 +66,7 @@ import { formatClock, formatDuration } from '../../ui/format';
             <p class="heading mt-1 text-6xl">{{ championClub() }}</p>
             <p class="mt-1 font-display text-2xl font-bold uppercase">{{ championNames() }}</p>
           </section>
+          <app-ballon-dor-panel />
         }
 
         <div class="mt-6"><app-decision-panel /></div>

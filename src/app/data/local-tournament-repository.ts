@@ -1,15 +1,20 @@
 import { Injectable } from '@angular/core';
-import { Tournament } from '../domain/types';
+import { BallonDorVote, Tournament } from '../domain/types';
+import { ballonDorState, validateVote, votingOpen } from '../domain/ballon-dor';
 import {
   ConflictError,
   hashPin,
   StoredTournament,
   TournamentRepository,
+  VoteTakenError,
+  VotingClosedError,
   WrongPinError,
 } from './tournament-repository';
 
 interface LocalRecord extends StoredTournament {
   pinHash: string;
+  /** Secret Ballon d'Or ballots, with the token of the phone that cast each. */
+  ballots?: (BallonDorVote & { token: string })[];
 }
 
 const PREFIX = 'pachanga:tournament:';
@@ -53,6 +58,43 @@ export class LocalTournamentRepository extends TournamentRepository {
     } catch {
       /* nothing stored */
     }
+  }
+
+  async castVote(id: string, voterId: string, picks: string[], token: string): Promise<void> {
+    const record = this.read(id);
+    if (!record || !votingOpen(record.tournament)) throw new VotingClosedError();
+    validateVote(record.tournament, voterId, picks);
+    const ballots = record.ballots ?? [];
+    const previous = ballots.find((b) => b.voterId === voterId);
+    if (previous && previous.token !== token) throw new VoteTakenError();
+    const next = previous
+      ? ballots.map((b) => (b === previous ? { ...b, picks } : b))
+      : [...ballots, { voterId, picks, token }];
+    this.publish(record, next, false);
+  }
+
+  async closeVoting(id: string, pin: string): Promise<void> {
+    const record = await this.adminRecord(id, pin);
+    this.publish(record, record.ballots ?? [], true);
+  }
+
+  async resetVote(id: string, pin: string, voterId: string): Promise<void> {
+    const record = await this.adminRecord(id, pin);
+    this.publish(record, (record.ballots ?? []).filter((b) => b.voterId !== voterId), false);
+  }
+
+  private async adminRecord(id: string, pin: string): Promise<LocalRecord> {
+    const record = this.read(id);
+    if (!record || !(await this.verifyPin(id, pin))) throw new WrongPinError();
+    if (!votingOpen(record.tournament)) throw new VotingClosedError();
+    return record;
+  }
+
+  /** Same as the server: the public state shows who voted, and every ballot once closed. */
+  private publish(record: LocalRecord, ballots: LocalRecord['ballots'] & {}, close: boolean): void {
+    const votes = ballots.map(({ voterId, picks }) => ({ voterId, picks }));
+    const tournament = { ...record.tournament, ballonDor: ballonDorState(record.tournament, votes, close) };
+    this.write({ ...record, tournament, ballots, version: record.version + 1 });
   }
 
   /** Removes every tournament kept in this tab (used to keep a single demo at a time). */

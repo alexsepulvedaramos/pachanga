@@ -8,12 +8,15 @@ import { DecisionPanel } from '../../ui/decision-panel';
 import { PHASE_LABELS, winnerOf } from '../../domain/knockout';
 import { champions, nextMatch } from '../../domain/tournament';
 import { Match } from '../../domain/types';
+import { votingOpen } from '../../domain/ballon-dor';
+import { Gala } from '../gala/gala';
+import { GalaViewer } from '../gala/gala-viewer';
 
 /** Big-screen view: current match, table and what comes next. Updates live. */
 @Component({
   selector: 'app-tv-page',
-  imports: [Brand, MatchCard, StandingsTable, DecisionPanel, RouterLink],
-  providers: [TournamentSession],
+  imports: [Brand, MatchCard, StandingsTable, DecisionPanel, RouterLink, Gala],
+  providers: [TournamentSession, GalaViewer],
   template: `
     @if (session.tournament(); as t) {
       <div class="flex min-h-dvh flex-col gap-6 p-6 lg:p-10">
@@ -29,6 +32,11 @@ import { Match } from '../../domain/types';
               <p class="eyebrow text-xl">Campeones</p>
               <p class="heading mt-3 text-[9rem] leading-none">{{ championClub() }}</p>
               <p class="mt-4 font-display text-5xl font-bold uppercase">{{ championNames() }}</p>
+              @if (voting()) {
+                <p class="mt-10 font-display text-4xl font-bold uppercase">
+                  Balón de Oro · {{ t.ballonDor?.voters?.length ?? 0 }}/{{ t.participants.length }} han votado
+                </p>
+              }
             </div>
           </section>
         } @else if (t.stage === 'draw') {
@@ -82,6 +90,9 @@ import { Match } from '../../domain/types';
           </div>
         }
       </div>
+      @if (gala.mode()) {
+        <app-gala />
+      }
     } @else if (session.loadError(); as error) {
       <p class="heading p-20 text-center text-5xl text-flare">{{ error }}</p>
     }
@@ -89,7 +100,13 @@ import { Match } from '../../domain/types';
 })
 export class TvPage {
   protected readonly session = inject(TournamentSession);
+  protected readonly gala = inject(GalaViewer);
   readonly id = input.required<string>();
+
+  protected readonly voting = computed(() => {
+    const t = this.session.tournament();
+    return !!t && votingOpen(t);
+  });
 
   constructor() {
     effect(() => void this.session.open(this.id().toUpperCase()));

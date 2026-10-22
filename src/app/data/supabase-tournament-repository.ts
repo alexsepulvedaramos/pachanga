@@ -7,6 +7,8 @@ import {
   PinLockedError,
   StoredTournament,
   TournamentRepository,
+  VoteTakenError,
+  VotingClosedError,
   WrongPinError,
 } from './tournament-repository';
 
@@ -71,6 +73,41 @@ export class SupabaseTournamentRepository extends TournamentRepository {
     if (error) throw new Error('No se ha podido borrar. Revisa la conexión.');
     if (data === -1) throw new WrongPinError();
     if (data === -3) throw new PinLockedError();
+  }
+
+  async castVote(id: string, voterId: string, picks: string[], token: string): Promise<void> {
+    const { data, error } = await this.client.rpc('cast_ballon_dor_vote', {
+      p_id: id,
+      p_voter: voterId,
+      p_picks: picks,
+      p_token: token,
+    });
+    if (error) throw new Error('No se ha podido votar. Revisa la conexión.');
+    if (data === -4) throw new VotingClosedError();
+    if (data === -5) throw new Error('El voto no es válido: elige a tres jugadores distintos.');
+    if (data === -6) throw new VoteTakenError();
+  }
+
+  async closeVoting(id: string, pin: string): Promise<void> {
+    const { data, error } = await this.client.rpc('close_ballon_dor', { p_id: id, p_pin: pin });
+    if (error) throw new Error('No se ha podido cerrar la votación. Revisa la conexión.');
+    this.checkAdminCode(data as number);
+  }
+
+  async resetVote(id: string, pin: string, voterId: string): Promise<void> {
+    const { data, error } = await this.client.rpc('reset_ballon_dor_vote', {
+      p_id: id,
+      p_pin: pin,
+      p_voter: voterId,
+    });
+    if (error) throw new Error('No se ha podido borrar el voto. Revisa la conexión.');
+    this.checkAdminCode(data as number);
+  }
+
+  private checkAdminCode(code: number): void {
+    if (code === -1) throw new WrongPinError();
+    if (code === -3) throw new PinLockedError();
+    if (code === -4) throw new VotingClosedError();
   }
 
   async subscribePush(id: string, participantId: string, sub: PushSubscriptionJSON): Promise<void> {

@@ -2,7 +2,13 @@ import { computed, DestroyRef, Injectable, inject, signal } from '@angular/core'
 import { Id, Tournament } from '../domain/types';
 import { Rng } from '../domain/rng';
 import { TournamentStore } from './tournament-store';
-import { ConflictError, PinLockedError, WrongPinError } from './tournament-repository';
+import {
+  ConflictError,
+  PinLockedError,
+  TournamentRepository,
+  WrongPinError,
+} from './tournament-repository';
+import { validateVote } from '../domain/ballon-dor';
 import { ToastService } from '../ui/toast.service';
 
 /** One open tournament: live state, admin rights and the actions that change it. */
@@ -143,6 +149,59 @@ export class TournamentSession {
       return false;
     } finally {
       this.saving.set(false);
+    }
+  }
+
+  /** Casts (or changes) the Ballon d'Or podium of the person using this phone. */
+  async castVote(picks: Id[]): Promise<boolean> {
+    const t = this.tournament();
+    const me = this.me();
+    if (!t || !me) return false;
+    try {
+      validateVote(t, me, picks);
+      await (await this.store.repo(t.id)).castVote(t.id, me, picks, this.store.voteToken(t.id));
+      this.store.rememberBallot(t.id, me, picks);
+      await this.refresh();
+      return true;
+    } catch (error) {
+      this.toast.error(error);
+      return false;
+    }
+  }
+
+  /** Podium this phone voted for the person using it, if any. */
+  myBallot(): Id[] | null {
+    const t = this.tournament();
+    const me = this.me();
+    return t && me ? (this.store.savedBallots(t.id)[me] ?? null) : null;
+  }
+
+  async closeVoting(): Promise<boolean> {
+    return this.adminCall((repo, id, pin) => repo.closeVoting(id, pin));
+  }
+
+  async resetVote(voterId: Id): Promise<boolean> {
+    return this.adminCall((repo, id, pin) => repo.resetVote(id, pin, voterId));
+  }
+
+  /** Runs a server-side admin action that changes the tournament, then catches up with it. */
+  private async adminCall(
+    call: (repo: TournamentRepository, id: string, pin: string) => Promise<void>,
+  ): Promise<boolean> {
+    const t = this.tournament();
+    const pin = this.pin();
+    if (!t || !pin) {
+      this.toast.error('Desbloquea el modo admin para hacer cambios.');
+      return false;
+    }
+    try {
+      await call(await this.store.repo(t.id), t.id, pin);
+      await this.refresh();
+      return true;
+    } catch (error) {
+      this.toast.error(error);
+      if (error instanceof WrongPinError || error instanceof PinLockedError) this.lock();
+      return false;
     }
   }
 

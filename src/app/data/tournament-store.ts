@@ -15,6 +15,8 @@ const RECENT_KEY = 'pachanga:recent';
 const pinKey = (id: string) => `pachanga:pin:${id}`;
 const meKey = (id: string) => `pachanga:me:${id}`;
 const pushKey = (id: string) => `pachanga:push:${id}`;
+const voteTokenKey = (id: string) => `pachanga:vote-token:${id}`;
+const ballotsKey = (id: string) => `pachanga:ballots:${id}`;
 
 const isDemo = (id: string) => id.startsWith(DEMO_PREFIX);
 
@@ -72,7 +74,7 @@ export class TournamentStore {
   /** Removes a tournament from this device only: recent list, PIN and preferences. */
   forget(id: string): void {
     this.writeRecent(this.recent().filter((r) => r.id !== id));
-    for (const k of [pinKey(id), meKey(id), pushKey(id)]) this.storage(id)?.removeItem(k);
+    for (const k of [pinKey(id), meKey(id), pushKey(id), voteTokenKey(id), ballotsKey(id)]) this.storage(id)?.removeItem(k);
   }
 
   savedPin(id: string): string | null {
@@ -94,6 +96,29 @@ export class TournamentStore {
   rememberIdentity(id: string, participantId: string | null): void {
     if (participantId) this.set(id, meKey(id), participantId);
     else this.storage(id)?.removeItem(meKey(id));
+  }
+
+  /** Random secret tying the ballots cast from this phone to it, created on first use. */
+  voteToken(id: string): string {
+    const saved = this.storage(id)?.getItem(voteTokenKey(id));
+    if (saved) return saved;
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    const token = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+    this.set(id, voteTokenKey(id), token);
+    return token;
+  }
+
+  /** Podiums voted from this phone, by voter, so they can be shown and changed. */
+  savedBallots(id: string): Record<string, string[]> {
+    try {
+      return JSON.parse(this.storage(id)?.getItem(ballotsKey(id)) ?? '{}') as Record<string, string[]>;
+    } catch {
+      return {};
+    }
+  }
+
+  rememberBallot(id: string, voterId: string, picks: string[]): void {
+    this.set(id, ballotsKey(id), JSON.stringify({ ...this.savedBallots(id), [voterId]: picks }));
   }
 
   recent(): RecentTournament[] {

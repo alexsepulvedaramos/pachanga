@@ -6,11 +6,13 @@ import { ToastService } from '../../ui/toast.service';
 import { StageBadge } from '../../ui/stage-badge';
 import { ShareButtons } from '../../ui/share-buttons';
 import { invitationText, tournamentUrl } from '../../domain/share-text';
+import { Gala } from '../gala/gala';
+import { GalaViewer } from '../gala/gala-viewer';
 
 @Component({
   selector: 'app-tournament-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Brand, StageBadge, ShareButtons],
-  providers: [TournamentSession],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Brand, StageBadge, ShareButtons, Gala],
+  providers: [TournamentSession, GalaViewer],
   template: `
     @if (session.loading()) {
       <div class="grid min-h-dvh place-items-center">
@@ -94,11 +96,16 @@ import { invitationText, tournamentUrl } from '../../domain/share-text';
       <main class="mx-auto max-w-5xl px-4 pb-24 pt-5">
         <router-outlet />
       </main>
+
+      @if (gala.mode()) {
+        <app-gala />
+      }
     }
   `,
 })
 export class TournamentShell {
   protected readonly session = inject(TournamentSession);
+  protected readonly gala = inject(GalaViewer);
   private readonly toast = inject(ToastService);
 
   readonly id = input.required<string>();

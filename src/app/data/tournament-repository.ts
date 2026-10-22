@@ -23,6 +23,18 @@ export class PinLockedError extends Error {
   }
 }
 
+export class VoteTakenError extends Error {
+  constructor() {
+    super('Ese voto se emitió desde otro móvil. Si no fuiste tú, pide al admin que lo borre.');
+  }
+}
+
+export class VotingClosedError extends Error {
+  constructor() {
+    super('La votación ya está cerrada.');
+  }
+}
+
 export class NotFoundError extends Error {
   constructor() {
     super('No existe ningún torneo con ese código.');
@@ -50,6 +62,16 @@ export abstract class TournamentRepository {
 
   /** Deletes a tournament for everyone. Needs the admin PIN. */
   abstract delete(id: string, pin: string): Promise<void>;
+
+  /**
+   * Casts or changes a participant's Ballon d'Or podium. The first ballot is tied to `token`, kept
+   * on the phone that cast it: only that token can change it.
+   */
+  abstract castVote(id: string, voterId: string, picks: string[], token: string): Promise<void>;
+  /** Closes the vote with the ballots cast so far. Needs the admin PIN. */
+  abstract closeVoting(id: string, pin: string): Promise<void>;
+  /** Deletes a participant's ballot so they can vote again. Needs the admin PIN. */
+  abstract resetVote(id: string, pin: string, voterId: string): Promise<void>;
 
   /** Registers this device for push notifications addressed to one participant. */
   abstract subscribePush(id: string, participantId: string, subscription: PushSubscriptionJSON): Promise<void>;

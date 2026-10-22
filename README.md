@@ -37,6 +37,14 @@ their own phones or on the TV.
   to it as possible, or browse them: each club shows its estimated rating, attack/midfield/defence,
   stars and best starting XI on a pitch. Ratings are labelled with the game edition they belong to.
 - **Optional goal scorers** and a top scorers table.
+- **Ballon d'Or** (optional): when the final ends every player votes a podium (3, 2 and 1 points,
+  never themselves) from their phone. Ballots stay secret in their own table; the vote closes when
+  everybody has voted or the admin closes it. A ballot is tied to the phone that cast it, and the
+  admin can delete one cast by an impostor.
+- **Closing gala**, full screen and story-style: how the night went, the champions, the Golden Boot
+  and the Ballon d'Or from third to first, with a drumroll before each name. The admin starts it
+  and moves through it from their phone while every phone and the TV follow along; anyone can
+  replay it afterwards.
 - **Your matches.** Each phone can say who is holding it: that player's matches are highlighted and
   a panel says whether it's their turn, how many matches until theirs and roughly at what time.
 - **Push notifications.** Players can ask to be told when it's their turn, when they're up next,
@@ -104,6 +112,8 @@ static file per game edition in `public/data/clubs/`, with an index of the editi
 
 Where the rulebook leaves room for interpretation, the app does this:
 
+- **Ballon d'Or ties:** more first places, then more second places, then more goals, then how far
+  their team got, then the drawing of lots.
 - **Solo player in the playoff:** nobody is eliminated yet, so they get a drawn stand-in per match,
   as in the group stage. The fixed partner from the eliminated players is drawn for the semis.
 - **Group winner's pick:** the 1st can choose any of the other semi-finalists, the 2nd included.
@@ -129,8 +139,8 @@ npm start
 ```
 
 Without backend settings the app stores tournaments in the browser, which is enough to try it
-out. To sync between devices, create a Supabase project, run
-`supabase/migrations/0001_init.sql` and fill in the URL and publishable key in
+out. To sync between devices, create a Supabase project, run the files in
+`supabase/migrations/` in order and fill in the URL and publishable key in
 `src/app/config.ts`.
 
 ```bash

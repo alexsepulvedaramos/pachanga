@@ -177,6 +177,18 @@ const CLUB_SUGGESTIONS = [
             (change)="trackScorers.set($any($event.target).checked)"
           />
         </label>
+        <label class="panel mt-3 flex cursor-pointer items-center justify-between gap-4">
+          <span>
+            <span class="block font-display text-lg font-bold uppercase">Balón de Oro</span>
+            <span class="text-sm text-mist">Al acabar la final, cada jugador vota su podio (3, 2 y 1 puntos) y se entrega en la gala.</span>
+          </span>
+          <input
+            type="checkbox"
+            class="size-6 accent-volt"
+            [checked]="ballonDor()"
+            (change)="ballonDor.set($any($event.target).checked)"
+          />
+        </label>
         <div class="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
           @for (phase of phases(); track phase) {
             <label class="block bg-pitch p-2">
@@ -257,6 +269,7 @@ export class SetupPage {
   protected readonly clubs = signal<string[]>([]);
   protected readonly tiebreakers = signal<TiebreakCriterion[]>([...DEFAULT_CONFIG.tiebreakers]);
   protected readonly trackScorers = signal(false);
+  protected readonly ballonDor = signal(false);
   /** Minutes per half changed by hand; the rest follow the defaults for the number of teams. */
   private readonly minuteOverrides = signal<Partial<HalfMinutes>>({});
   protected readonly changeover = signal(DEFAULT_CONFIG.changeoverMinutes);
@@ -386,6 +399,7 @@ export class SetupPage {
         config: {
           tiebreakers: this.tiebreakers(),
           trackScorers: this.trackScorers(),
+          ballonDor: this.ballonDor(),
           halfMinutes: this.minutes(),
           changeoverMinutes: this.changeover(),
           seed: randomSeed(),

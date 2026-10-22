@@ -10,6 +10,8 @@ import {
   participant,
   unavailableFor,
 } from '../../../src/app/domain/tournament';
+import { votingOpen } from '../../../src/app/domain/ballon-dor';
+import { galaLive } from '../../../src/app/domain/gala';
 import type { Match, Tournament } from '../../../src/app/domain/types';
 
 export interface PushMessage {
@@ -33,15 +35,34 @@ export function buildMessages(t: Tournament): PushMessage[] {
     const final = t.matches.find((m) => m.phase === 'final');
     const winners = champions(t) ?? [];
     if (!final || winners.length === 0) return [];
+    const everybody = t.participants.map((p) => p.id);
     const winnerTeam = t.teams.find((x) => winners.some((id) => x.memberIds.includes(id)));
-    return [
+    const messages: PushMessage[] = [
       {
         key: 'champions',
-        participantIds: t.participants.map((p) => p.id),
+        participantIds: everybody,
         title: `Campeones: ${winnerTeam?.club ?? ''}`,
         body: `${winners.map((id) => name(t, id)).join(' + ')} ganan ${t.name}.`,
       },
     ];
+    if (votingOpen(t)) {
+      messages.push({
+        key: 'vote',
+        participantIds: everybody.filter((id) => !t.ballonDor?.voters.includes(id)),
+        title: 'Vota al Balón de Oro',
+        body: `Elige tu podio de ${t.name}: 3, 2 y 1 puntos.`,
+      });
+    }
+    // Never says who won anything: that's for the gala.
+    if (t.gala && galaLive(t)) {
+      messages.push({
+        key: `gala:${t.gala.startedAt}`,
+        participantIds: everybody,
+        title: '¡Empieza la gala!',
+        body: 'Abre Pachanga: campeones, Bota de Oro y Balón de Oro, en directo.',
+      });
+    }
+    return messages;
   }
   if (t.stage !== 'groups' && t.stage !== 'knockout') return [];
 
