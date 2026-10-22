@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { BallonDorVote, Tournament } from '../domain/types';
+import { BallonDorVote, KnockoutChoices, Tournament } from '../domain/types';
 import { ballonDorState, validateVote, votingOpen } from '../domain/ballon-dor';
-import { MatchResult, playerStartMatch, reportResult } from '../domain/tournament';
+import { MatchResult, playerMakeChoice, playerStartMatch, reportResult } from '../domain/tournament';
 import {
   ConflictError,
   hashPin,
@@ -121,6 +121,12 @@ export class LocalTournamentRepository extends TournamentRepository {
   async reportResult(id: string, participantId: string, token: string, matchId: string, result: MatchResult): Promise<void> {
     const record = this.playerRecord(id, participantId, token);
     const tournament = reportResult(record.tournament, participantId, matchId, result);
+    this.write({ ...record, tournament, version: record.version + 1 });
+  }
+
+  async makeChoice(id: string, participantId: string, token: string, choice: Partial<KnockoutChoices>): Promise<void> {
+    const record = this.playerRecord(id, participantId, token);
+    const tournament = playerMakeChoice(record.tournament, participantId, choice);
     this.write({ ...record, tournament, version: record.version + 1 });
   }
 

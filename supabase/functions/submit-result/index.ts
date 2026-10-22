@@ -1,10 +1,10 @@
-// A player starts the match that's up, or enters the result of the one they're playing, from their
-// phone, without the admin PIN. The phone proves the name is its own with the token it took the
-// name with; the change goes through the app's own rules (domain.js) and is saved like any other,
-// retrying if someone saved in between.
+// A player starts the match that's up, enters the result of the one they're playing, or makes
+// their team's knockout choice, from their phone, without the admin PIN. The phone proves the name
+// is its own with the token it took the name with; the change goes through the app's own rules
+// (domain.js) and is saved like any other, retrying if someone saved in between.
 
 import postgres from 'npm:postgres@3.4.5';
-import { playerStartMatch, reportResult } from './domain.js';
+import { playerMakeChoice, playerStartMatch, reportResult } from './domain.js';
 
 const sql = postgres(Deno.env.get('SUPABASE_DB_URL')!, { prepare: false, max: 1 });
 
@@ -31,15 +31,16 @@ Deno.serve(async (req) => {
   } catch {
     return reply(400, { error: 'Petición no válida.' });
   }
-  const { action = 'result', tournament_id: id, participant_id: who, token, match_id: matchId, result } = input;
+  const { action = 'result', tournament_id: id, participant_id: who, token, match_id: matchId, result, choice } = input;
   if (
-    (action !== 'result' && action !== 'start') ||
+    (action !== 'result' && action !== 'start' && action !== 'choose') ||
     typeof id !== 'string' ||
     typeof who !== 'string' ||
     typeof token !== 'string' ||
     token.length < 16 ||
-    typeof matchId !== 'string' ||
-    (action === 'result' && (!result || typeof result !== 'object'))
+    (action !== 'choose' && typeof matchId !== 'string') ||
+    (action === 'result' && (!result || typeof result !== 'object')) ||
+    (action === 'choose' && (!choice || typeof choice !== 'object'))
   ) {
     return reply(400, { error: 'Petición no válida.' });
   }
@@ -57,7 +58,9 @@ Deno.serve(async (req) => {
       next =
         action === 'start'
           ? playerStartMatch(row.state, who, matchId, Math.random)
-          : reportResult(row.state, who, matchId, result);
+          : action === 'choose'
+            ? playerMakeChoice(row.state, who, choice)
+            : reportResult(row.state, who, matchId, result);
     } catch (error) {
       return reply(409, { error: (error as Error).message });
     }

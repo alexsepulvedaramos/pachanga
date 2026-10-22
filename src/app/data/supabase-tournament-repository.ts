@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Tournament } from '../domain/types';
+import { KnockoutChoices, Tournament } from '../domain/types';
 import { MatchResult } from '../domain/tournament';
 import { BACKEND } from '../config';
 import {
@@ -114,6 +114,10 @@ export class SupabaseTournamentRepository extends TournamentRepository {
 
   async reportResult(id: string, participantId: string, token: string, matchId: string, result: MatchResult): Promise<void> {
     await this.playerAction({ action: 'result', tournament_id: id, participant_id: participantId, token, match_id: matchId, result }, 'No se ha podido guardar el resultado. Revisa la conexión.');
+  }
+
+  async makeChoice(id: string, participantId: string, token: string, choice: Partial<KnockoutChoices>): Promise<void> {
+    await this.playerAction({ action: 'choose', tournament_id: id, participant_id: participantId, token, choice }, 'No se ha podido guardar la elección. Revisa la conexión.');
   }
 
   private async playerAction(body: Record<string, unknown>, fallback: string): Promise<void> {
