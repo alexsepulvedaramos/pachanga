@@ -4,6 +4,7 @@ import {
   createTournament,
   DEFAULT_CONFIG,
   finishDraw,
+  groupMatches,
   nextMatch,
   recordResult,
   spin,
@@ -17,7 +18,10 @@ export const DEMO_PIN = '0000';
 const NAMES = ['Guille', 'Miguel', 'Alex', 'Dani', 'Javi', 'Pablo', 'Sergio', 'Hugo', 'Rubén', 'Iván', 'Marcos'];
 const CLUBS = ['Real Madrid', 'Man City', 'Bayern', 'PSG', 'Inter', 'Liverpool'];
 
-/** An 11-player tournament halfway through the group stage, with one match being played. */
+/**
+ * An 11-player (six-team) tournament on the last group match, being played: entering its result
+ * closes the group stage, so the recap and the knockout choices come next.
+ */
 export function buildDemoTournament(): Tournament {
   const seed = Math.floor(Math.random() * 1e6);
   const rng = seededRng(seed);
@@ -31,7 +35,7 @@ export function buildDemoTournament(): Tournament {
   while (t.draw.picks.length < t.participants.length) t = spin(t, rng).tournament;
   t = finishDraw(t, rng);
 
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < groupMatches(t).length - 1; i++) {
     const m = nextMatch(t)!;
     t = startMatch(t, m.id, rng);
     const homeGoals = Math.floor(rng() * 4);
