@@ -36,6 +36,12 @@ test('everybody votes the Ballon d’Or and the admin runs the gala', async ({ p
     await expect(gala.getByText('PTS', { exact: true })).toBeVisible();
   }
   await gala.getByRole('button', { name: 'Terminar la gala' }).click();
+  // The summary picture: shared from a phone, downloaded where files can't be shared.
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    gala.getByRole('button', { name: 'Compartir', exact: true }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe('pachanga-e2e.png');
   await gala.getByRole('button', { name: 'Cerrar', exact: true }).click();
 
   // And straight into a rematch with the same people.

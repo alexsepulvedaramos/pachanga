@@ -8,6 +8,7 @@ import { Confetti } from '../../ui/confetti';
 import { CountUp } from '../../ui/count-up';
 import { GalaViewer } from './gala-viewer';
 import { Walkout, walkoutMs } from './walkout';
+import { ShareWrapped } from '../../ui/share-wrapped';
 
 /** How long each kind of slide stays up when replayed, after any walkout. */
 const SLIDE_MS: Record<GalaSlide['kind'], number> = {
@@ -143,9 +144,14 @@ const SLIDE_MS: Record<GalaSlide['kind'], number> = {
 
         <!-- Controls -->
         <div class="absolute inset-x-0 bottom-0 z-20 flex items-center justify-center gap-3 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+          @if (ended() || finished()) {
+            <button type="button" class="btn-primary" [disabled]="wrapped.busy()" (click)="$event.stopPropagation(); wrapped.share(t)">
+              Compartir
+            </button>
+          }
           @if (ended()) {
             <button type="button" class="btn-secondary" (click)="$event.stopPropagation(); restart()">Volver a verla</button>
-            <button type="button" class="btn-primary" (click)="$event.stopPropagation(); viewer.close()">Cerrar</button>
+            <button type="button" class="btn-secondary" (click)="$event.stopPropagation(); viewer.close()">Cerrar</button>
           } @else if (live() && session.isAdmin()) {
             <button type="button" class="btn-secondary" [disabled]="index() === 0 || session.saving()" (click)="$event.stopPropagation(); previous()">←</button>
             <button type="button" class="btn-primary min-w-48 text-lg" [disabled]="session.saving()" (click)="$event.stopPropagation(); next()">
@@ -155,7 +161,7 @@ const SLIDE_MS: Record<GalaSlide['kind'], number> = {
             <p class="eyebrow text-chalk/60">En directo · el admin pasa las pantallas</p>
           } @else if (finished()) {
             <button type="button" class="btn-secondary" (click)="$event.stopPropagation(); restart()">Volver a verla</button>
-            <button type="button" class="btn-primary" (click)="$event.stopPropagation(); viewer.close()">Cerrar</button>
+            <button type="button" class="btn-secondary" (click)="$event.stopPropagation(); viewer.close()">Cerrar</button>
           } @else {
             <p class="eyebrow text-chalk/50">Toca para avanzar</p>
           }
@@ -167,6 +173,7 @@ const SLIDE_MS: Record<GalaSlide['kind'], number> = {
 export class Gala implements OnInit, OnDestroy {
   protected readonly session = inject(TournamentSession);
   protected readonly viewer = inject(GalaViewer);
+  protected readonly wrapped = inject(ShareWrapped);
 
   protected readonly slides = computed(() => {
     const t = this.session.tournament();

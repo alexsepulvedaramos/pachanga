@@ -6,6 +6,7 @@ import { topScorers } from '../../domain/tournament';
 import { Id } from '../../domain/types';
 import { ConfirmService } from '../../ui/confirm.service';
 import { GalaViewer } from './gala-viewer';
+import { ShareWrapped } from '../../ui/share-wrapped';
 import { changeName } from '../../ui/identity-gate';
 import { PushNotifications } from '../../data/push-notifications';
 
@@ -153,6 +154,11 @@ const PLACES = ['1º', '2º', '3º'];
           </p>
           @if (live()) {
             <button type="button" class="btn-primary mt-4" (click)="viewer.watchLive()">Volver al directo</button>
+          } @else if (t.gala) {
+            <div class="mt-4 flex flex-wrap justify-center gap-2">
+              <button type="button" class="btn-primary" [disabled]="wrapped.busy()" (click)="wrapped.share(t)">Compartir el resumen</button>
+              <button type="button" class="btn-secondary" (click)="viewer.replay()">Volver a verla</button>
+            </div>
           } @else {
             @if (session.isAdmin()) {
               <p class="mt-2 text-sm text-mist">Empieza a la vez en todos los móviles y en la tele, y tú pasas las pantallas.</p>
@@ -178,6 +184,7 @@ const PLACES = ['1º', '2º', '3º'];
 export class BallonDorPanel {
   protected readonly session = inject(TournamentSession);
   protected readonly viewer = inject(GalaViewer);
+  protected readonly wrapped = inject(ShareWrapped);
   private readonly confirm = inject(ConfirmService);
   private readonly push = inject(PushNotifications);
   protected readonly places = PLACES;

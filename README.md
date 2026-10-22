@@ -44,7 +44,8 @@ their own phones or on the TV.
 - **Closing gala**, full screen and story-style: how the night went, the champions, the Golden Boot
   and the Ballon d'Or from third to first, with a drumroll before each name. The admin starts it
   and moves through it from their phone while every phone and the TV follow along; anyone can
-  replay it afterwards.
+  replay it afterwards, and share the whole night as one story-sized picture (numbers, champions,
+  Golden Boot and Ballon d'Or podium) through the phone's share sheet.
 - **Your matches.** Opening a tournament asks who you are; each name belongs to one phone (tied to
   a random token kept on it), so nobody can take someone else's name, and anyone else follows as
   a guest. A name picked by mistake is let go from that phone (deleting the Ballon d'Or ballot cast
