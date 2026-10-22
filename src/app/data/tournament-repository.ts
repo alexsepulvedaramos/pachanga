@@ -84,6 +84,9 @@ export abstract class TournamentRepository {
    * A player of a live match enters its result from the phone holding their name (`token`),
    * without the admin PIN.
    */
+  /** A player of the match that's up starts it from the phone holding their name. */
+  abstract startMatch(id: string, participantId: string, token: string, matchId: string): Promise<void>;
+
   abstract reportResult(id: string, participantId: string, token: string, matchId: string, result: MatchResult): Promise<void>;
 
   /**

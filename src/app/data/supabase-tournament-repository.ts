@@ -108,14 +108,20 @@ export class SupabaseTournamentRepository extends TournamentRepository {
     this.checkAdminCode(data as number);
   }
 
+  async startMatch(id: string, participantId: string, token: string, matchId: string): Promise<void> {
+    await this.playerAction({ action: 'start', tournament_id: id, participant_id: participantId, token, match_id: matchId }, 'No se ha podido empezar el partido. Revisa la conexión.');
+  }
+
   async reportResult(id: string, participantId: string, token: string, matchId: string, result: MatchResult): Promise<void> {
-    const { error } = await this.client.functions.invoke('submit-result', {
-      body: { tournament_id: id, participant_id: participantId, token, match_id: matchId, result },
-    });
+    await this.playerAction({ action: 'result', tournament_id: id, participant_id: participantId, token, match_id: matchId, result }, 'No se ha podido guardar el resultado. Revisa la conexión.');
+  }
+
+  private async playerAction(body: Record<string, unknown>, fallback: string): Promise<void> {
+    const { error } = await this.client.functions.invoke('submit-result', { body });
     if (!error) return;
-    // The function explains refusals (not started, not playing, already in) in its body.
-    const body = await (error as { context?: Response }).context?.json?.().catch(() => null);
-    throw new Error(body?.error ?? 'No se ha podido guardar el resultado. Revisa la conexión.');
+    // The function explains refusals (not your turn, not playing, already in) in its body.
+    const reply = await (error as { context?: Response }).context?.json?.().catch(() => null);
+    throw new Error(reply?.error ?? fallback);
   }
 
   async castVote(id: string, voterId: string, picks: string[], token: string): Promise<void> {

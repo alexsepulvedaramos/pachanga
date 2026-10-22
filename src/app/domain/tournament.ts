@@ -392,6 +392,21 @@ export function recordResult(t: Tournament, matchId: Id, result: MatchResult): T
 }
 
 /**
+ * A player of the match that's up starts it from their phone (drawing any stand-in), so the
+ * night doesn't wait on the admin.
+ */
+export function playerStartMatch(t: Tournament, participantId: Id, matchId: Id, rng: Rng): Tournament {
+  const m = match(t, matchId);
+  if (m.status === 'live') return t;
+  if (t.matches.some((x) => x.status === 'live')) throw new TournamentError('Ya hay un partido en juego.');
+  if (nextMatch(t)?.id !== matchId) throw new TournamentError('Ese partido aún no toca.');
+  if (!playsIn(t, m, participantId)) {
+    throw new TournamentError('Solo pueden empezarlo los que juegan el partido.');
+  }
+  return startMatch(t, matchId, rng);
+}
+
+/**
  * A player of the match enters its result from their phone. Only while it is being played, and
  * only once: a result already in is the admin's to correct.
  */

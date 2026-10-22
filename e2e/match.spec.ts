@@ -43,7 +43,7 @@ test('a name another phone holds cannot be picked, and a guest can still follow'
   await other.close();
 });
 
-test('a player of the live match enters its result from their phone', async ({ page }) => {
+test('a player starts their match and enters its result from their phone', async ({ page }) => {
   const t = newTournament('DEMOREPORT');
   const first = t.matches[0];
   const home = t.teams.find((x) => x.id === first.homeId)!;
@@ -52,10 +52,11 @@ test('a player of the live match enters its result from their phone', async ({ p
   await openWith(page, t);
   await pickName(page, player);
 
-  // The admin starts the match, then this phone stops being the admin's.
-  await page.getByRole('button', { name: 'Empezar partido' }).click();
+  // This phone isn't the admin's: the player starts their own match.
   await page.getByRole('button', { name: /salir del modo admin/ }).click();
   await expect(page.getByRole('button', { name: 'Entrar como admin' })).toBeVisible();
+  await page.getByRole('button', { name: 'Empezar partido' }).click();
+  await expect(page.getByText('En juego', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Meter resultado' }).click();
   await page.getByRole('button', { name: `Sumar goles ${home.club}` }).click();

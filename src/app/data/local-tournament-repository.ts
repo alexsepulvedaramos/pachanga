@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BallonDorVote, Tournament } from '../domain/types';
 import { ballonDorState, validateVote, votingOpen } from '../domain/ballon-dor';
-import { MatchResult, reportResult } from '../domain/tournament';
+import { MatchResult, playerStartMatch, reportResult } from '../domain/tournament';
 import {
   ConflictError,
   hashPin,
@@ -112,14 +112,26 @@ export class LocalTournamentRepository extends TournamentRepository {
     this.write(withClaims(record, (record.claims ?? []).filter((c) => c.participantId !== participantId)));
   }
 
+  async startMatch(id: string, participantId: string, token: string, matchId: string): Promise<void> {
+    const record = this.playerRecord(id, participantId, token);
+    const tournament = playerStartMatch(record.tournament, participantId, matchId, Math.random);
+    this.write({ ...record, tournament, version: record.version + 1 });
+  }
+
   async reportResult(id: string, participantId: string, token: string, matchId: string, result: MatchResult): Promise<void> {
+    const record = this.playerRecord(id, participantId, token);
+    const tournament = reportResult(record.tournament, participantId, matchId, result);
+    this.write({ ...record, tournament, version: record.version + 1 });
+  }
+
+  /** The record, once the phone holding `token` is shown to own the name, as the server checks. */
+  private playerRecord(id: string, participantId: string, token: string): LocalRecord {
     const record = this.read(id);
     if (!record) throw new ConflictError();
     if (!(record.claims ?? []).some((c) => c.participantId === participantId && c.token === token)) {
       throw new Error('Ese nombre no es de este móvil.');
     }
-    const tournament = reportResult(record.tournament, participantId, matchId, result);
-    this.write({ ...record, tournament, version: record.version + 1 });
+    return record;
   }
 
   async castVote(id: string, voterId: string, picks: string[], token: string): Promise<void> {

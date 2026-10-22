@@ -10,7 +10,7 @@ import {
   WrongPinError,
 } from './tournament-repository';
 import { validateVote } from '../domain/ballon-dor';
-import { MatchResult, reportResult } from '../domain/tournament';
+import { MatchResult, playerStartMatch, reportResult } from '../domain/tournament';
 import { ToastService } from '../ui/toast.service';
 
 /** Saves retried on top of someone else's change before giving up. */
@@ -251,15 +251,37 @@ export class TournamentSession {
     }
   }
 
+  /** The person using this phone starts the match that's up, which they play in. */
+  startAsPlayer(matchId: Id): Promise<boolean> {
+    return this.asPlayer(
+      (t, me) => playerStartMatch(t, me, matchId, Math.random),
+      (repo, id, me, token) => repo.startMatch(id, me, token, matchId),
+    );
+  }
+
   /** The person using this phone enters the result of the match they're playing. */
-  async reportResult(matchId: Id, result: MatchResult): Promise<boolean> {
+  reportResult(matchId: Id, result: MatchResult): Promise<boolean> {
+    return this.asPlayer(
+      (t, me) => reportResult(t, me, matchId, result),
+      (repo, id, me, token) => repo.reportResult(id, me, token, matchId, result),
+    );
+  }
+
+  /**
+   * Something a player does from their phone: checked here first with the same rules (and
+   * messages) the server uses, then sent, then caught up with.
+   */
+  private async asPlayer(
+    check: (t: Tournament, me: Id) => unknown,
+    send: (repo: TournamentRepository, id: string, me: Id, token: string) => Promise<void>,
+  ): Promise<boolean> {
     const t = this.tournament();
     const me = this.me();
     if (!t || !me) return false;
     this.saving.set(true);
     try {
-      reportResult(t, me, matchId, result); // same checks as the server, with its messages, before going out
-      await (await this.store.repo(t.id)).reportResult(t.id, me, this.store.deviceToken(t.id), matchId, result);
+      check(t, me);
+      await send(await this.store.repo(t.id), t.id, me, this.store.deviceToken(t.id));
       this.saving.set(false);
       await this.refresh();
       return true;

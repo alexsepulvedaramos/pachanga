@@ -36,8 +36,9 @@ their own phones or on the TV.
 - **Balanced club picker.** Pick a target rating and get clubs from the big five leagues as close
   to it as possible, or browse them: each club shows its estimated rating, attack/midfield/defence,
   stars and best starting XI on a pitch. Ratings are labelled with the game edition they belong to.
-- **Players enter results too.** While a match is being played, any of its players can enter the
-  result from the phone holding their name; a Supabase Edge Function checks that phone's token and
+- **Players start their match and enter its result too.** Any player of the match that's up can
+  start it, and while it's being played any of its players can enter the result, from the phone
+  holding their name; a Supabase Edge Function checks that phone's token and
   applies it with the app's own rules (bundled like the notifications). The match then shows who
   entered it, and the admin can still correct it.
 - **Optional goal scorers** and a top scorers table.

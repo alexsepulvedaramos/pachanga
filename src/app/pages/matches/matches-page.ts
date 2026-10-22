@@ -117,6 +117,13 @@ import { rematchDraft } from '../../domain/rematch';
                 <button type="button" class="btn-primary px-10 text-lg" (click)="editing.set(m.id)">Meter resultado</button>
                 <p class="text-center text-xs text-mist">Lo puede meter cualquiera de los que jugáis; el admin lo corrige si hace falta.</p>
               </div>
+            } @else if (m.status === 'pending' && iPlay(m)) {
+              <div class="mt-6 flex flex-col items-center gap-2">
+                <button type="button" class="btn-primary px-10 text-lg" [disabled]="session.saving()" (click)="session.startAsPlayer(m.id)">
+                  Empezar partido
+                </button>
+                <p class="text-center text-xs text-mist">Os toca: cualquiera de los que jugáis puede darle.</p>
+              </div>
             }
           </section>
         }

@@ -310,6 +310,50 @@ var isLateKnockout = (m) => m.phase === "semi" || m.phase === "third" || m.phase
 function playsIn(t, m, participantId) {
   return [m.homeId, m.awayId].some((teamId) => lineup(t, m, teamId).includes(participantId));
 }
+function nextMatch(t) {
+  return t.matches.find((m) => m.status !== "done") ?? null;
+}
+function startMatch(t, matchId, rng) {
+  const m = match(t, matchId);
+  if (m.status === "done") throw new TournamentError("Ese partido ya est\xE1 terminado.");
+  const standIns = { ...m.standIns };
+  for (const teamId of [m.homeId, m.awayId]) {
+    if (!needsStandIn(t, m, teamId) || standIns[teamId]) continue;
+    standIns[teamId] = drawStandIn(t, m, teamId, rng);
+  }
+  const updated = {
+    ...m,
+    status: "live",
+    ...Object.keys(standIns).length ? { standIns } : {}
+  };
+  return {
+    ...t,
+    liveMatchId: matchId,
+    matches: t.matches.map(
+      (x) => x.id === matchId ? updated : x.status === "live" ? { ...x, status: "pending" } : x
+    )
+  };
+}
+function needsStandIn(t, m, teamId) {
+  if (!isSolo(t, teamId)) return false;
+  const hasKnockoutPartner = !!team(t, teamId).knockoutPartnerId;
+  return !(hasKnockoutPartner && (m.phase === "semi" || m.phase === "third" || m.phase === "final"));
+}
+function drawStandIn(t, m, teamId, rng) {
+  const busy = /* @__PURE__ */ new Set([
+    ...lineup(t, m, m.homeId),
+    ...lineup(t, m, m.awayId),
+    ...Object.values(m.standIns ?? {})
+  ]);
+  const candidates = t.participants.filter((p) => !p.disqualified && !busy.has(p.id));
+  if (candidates.length === 0) throw new TournamentError("No hay nadie libre para hacer pareja.");
+  const timesUsed = (id) => t.matches.filter((x) => x.standIns?.[teamId] === id).length;
+  const fewest = Math.min(...candidates.map((p) => timesUsed(p.id)));
+  return pick(
+    candidates.filter((p) => timesUsed(p.id) === fewest),
+    rng
+  ).id;
+}
 function recordResult(t, matchId, result) {
   const m = match(t, matchId);
   validateResult(t, m, result);
@@ -330,6 +374,16 @@ function recordResult(t, matchId, result) {
   };
   const next = replaceMatch(t, updated);
   return sync({ ...next, liveMatchId: t.liveMatchId === matchId ? void 0 : t.liveMatchId });
+}
+function playerStartMatch(t, participantId, matchId, rng) {
+  const m = match(t, matchId);
+  if (m.status === "live") return t;
+  if (t.matches.some((x) => x.status === "live")) throw new TournamentError("Ya hay un partido en juego.");
+  if (nextMatch(t)?.id !== matchId) throw new TournamentError("Ese partido a\xFAn no toca.");
+  if (!playsIn(t, m, participantId)) {
+    throw new TournamentError("Solo pueden empezarlo los que juegan el partido.");
+  }
+  return startMatch(t, matchId, rng);
 }
 function reportResult(t, participantId, matchId, result) {
   const m = match(t, matchId);
@@ -438,5 +492,6 @@ function drawKnockoutPartners(t) {
   return { ...t, teams };
 }
 export {
+  playerStartMatch,
   reportResult
 };
