@@ -27,10 +27,11 @@ import { BallonDorPanel } from '../gala/ballon-dor-panel';
 import { ClubCrest } from '../../ui/club-crest';
 import { rematchDraft } from '../../domain/rematch';
 import { LeagueRecapViewer } from '../league/league-recap-viewer';
+import { Icon } from '../../ui/icon';
 
 @Component({
   selector: 'app-matches-page',
-  imports: [MatchCard, DecisionPanel, ResultForm, MatchSummary, Modal, RouterLink, MyTurnPanel, BallonDorPanel, ClubCrest],
+  imports: [MatchCard, DecisionPanel, ResultForm, MatchSummary, Modal, RouterLink, MyTurnPanel, BallonDorPanel, ClubCrest, Icon],
   template: `
     @if (session.tournament(); as t) {
       @if (t.stage === 'draw') {
@@ -180,7 +181,7 @@ import { LeagueRecapViewer } from '../league/league-recap-viewer';
                       }
                     </span>
                     @if (session.isAdmin() && row.match.status === 'done') {
-                      <button type="button" class="text-mist hover:text-chalk" [attr.aria-label]="'Corregir partido ' + row.number" (click)="$event.stopPropagation(); correct(row.match)">✎</button>
+                      <button type="button" class="text-mist hover:text-chalk" [attr.aria-label]="'Corregir partido ' + row.number" (click)="$event.stopPropagation(); correct(row.match)"><app-icon name="pencil" /></button>
                     }
                   </div>
                   @if (expanded() === row.match.id && row.match.status === 'done') {

@@ -1,5 +1,6 @@
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
+import { Icon } from './icon';
 
 /** Chrome's install prompt event (not in the DOM typings). */
 interface BeforeInstallPromptEvent extends Event {
@@ -16,6 +17,7 @@ const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
  */
 @Component({
   selector: 'app-install-banner',
+  imports: [Icon],
   template: `
     @if (visible()) {
       <aside
@@ -37,7 +39,7 @@ const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
         @if (!ios()) {
           <button type="button" class="btn-primary shrink-0 px-4 py-2 text-sm" (click)="install()">Instalar</button>
         }
-        <button type="button" class="shrink-0 px-1 text-mist hover:text-chalk" aria-label="Ahora no" (click)="dismiss()">✕</button>
+        <button type="button" class="shrink-0 px-1 text-mist hover:text-chalk" aria-label="Ahora no" (click)="dismiss()"><app-icon name="close" /></button>
       </aside>
     }
   `,

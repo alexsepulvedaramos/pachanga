@@ -7,6 +7,7 @@ import {
   Line,
   suggestClubs,
 } from '../../domain/club-ratings';
+import { Icon, Stars } from '../../ui/icon';
 
 const LINES: { line: Line; label: string }[] = [
   { line: 'att', label: 'Delantera' },
@@ -18,7 +19,7 @@ const LINES: { line: Line; label: string }[] = [
 /** Browse clubs by rating, open one to see its best XI, and pick as many as there are pairs. */
 @Component({
   selector: 'app-club-picker',
-  imports: [ClubCrest],
+  imports: [ClubCrest, Icon, Stars],
   template: `
     <div class="cut mt-3 animate-rise border-t-4 border-cyan bg-pitch p-4">
       @if (error()) {
@@ -78,12 +79,12 @@ const LINES: { line: Line; label: string }[] = [
                   [attr.aria-label]="(picked ? 'Quitar ' : 'Elegir ') + club.name"
                   (click)="toggle(club)"
                 >
-                  {{ picked ? '✓' : '+' }}
+                  @if (picked) {<app-icon name="check" />} @else {+}
                 </button>
                 <app-club-crest [club]="club.name" size="2.25rem" />
                 <button type="button" class="min-w-0 flex-1 text-left" (click)="expand(club)" [attr.aria-expanded]="expanded() === club.id">
                   <span class="block truncate font-display text-lg font-extrabold uppercase italic leading-tight">{{ club.name }}</span>
-                  <span class="block truncate text-xs text-mist">{{ club.league }} · <span class="text-gold">{{ stars(club.stars) }}</span></span>
+                  <span class="block truncate text-xs text-mist">{{ club.league }} · <app-stars class="text-gold" [value]="club.stars" /></span>
                 </button>
                 <span class="hidden font-display text-sm font-bold text-mist sm:block">
                   ATA {{ club.attack }} · MED {{ club.midfield }} · DEF {{ club.defence }}
@@ -242,9 +243,5 @@ export class ClubPicker implements OnInit {
         .filter((p) => p.line === line)
         .sort((a, b) => side(a.position) - side(b.position)),
     }));
-  }
-
-  protected stars(value: number): string {
-    return '★'.repeat(Math.floor(value)) + (value % 1 ? '½' : '');
   }
 }

@@ -9,6 +9,8 @@ import { CountUp } from '../../ui/count-up';
 import { GalaViewer } from './gala-viewer';
 import { Walkout, walkoutMs } from './walkout';
 import { ShareWrapped } from '../../ui/share-wrapped';
+import { Icon } from '../../ui/icon';
+import { ChampionsCup, GoldenBoot } from '../../ui/trophies';
 
 /** How long each kind of slide stays up when replayed, after any walkout. */
 const SLIDE_MS: Record<GalaSlide['kind'], number> = {
@@ -26,7 +28,7 @@ const SLIDE_MS: Record<GalaSlide['kind'], number> = {
  */
 @Component({
   selector: 'app-gala',
-  imports: [Confetti, CountUp, ClubCrest, Walkout],
+  imports: [Confetti, CountUp, ClubCrest, Walkout, Icon, GoldenBoot, ChampionsCup],
   host: {
     '(document:keydown.arrowright)': 'next()',
     '(document:keydown.space)': '$event.preventDefault(); next()',
@@ -71,7 +73,7 @@ const SLIDE_MS: Record<GalaSlide['kind'], number> = {
                 aria-label="Cerrar la gala"
                 (click)="$event.stopPropagation(); viewer.close()"
               >
-                ✕
+                <app-icon name="close" />
               </button>
             </div>
           </div>
@@ -115,7 +117,7 @@ const SLIDE_MS: Record<GalaSlide['kind'], number> = {
                   [color]="clubColorOf(slide.teamId)"
                   size="clamp(6rem, 30vw, 12rem)"
                 />
-                <p class="eyebrow mt-4 animate-rise text-volt [animation-delay:400ms]">🏆 Campeones</p>
+                <p class="eyebrow mt-4 flex animate-rise items-center gap-2 text-volt [animation-delay:400ms]"><app-champions-cup size="1.6rem" /> Campeones</p>
                 <h2 class="heading mt-2 animate-slam text-[clamp(3.5rem,16vw,10rem)] [animation-delay:700ms]">{{ session.teamName(slide.teamId) }}</h2>
                 <p class="mt-4 animate-rise font-display text-[clamp(1.5rem,6vw,3rem)] font-bold uppercase [animation-delay:1300ms]">
                   {{ names(slide.playerIds) }}
@@ -125,7 +127,7 @@ const SLIDE_MS: Record<GalaSlide['kind'], number> = {
 
               @case ('goldenBoot') {
                 <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_35%,#ffc83d33,var(--color-ink)_65%)]"></div>
-                <p class="animate-pop text-[clamp(5rem,20vw,10rem)] leading-none" aria-hidden="true">👟</p>
+                <app-golden-boot class="animate-pop" size="clamp(7rem, 32vw, 12rem)" />
                 <p class="eyebrow mt-4 animate-rise text-gold [animation-delay:400ms]">
                   Bota de Oro{{ slide.participantIds.length > 1 ? ' compartida' : '' }}
                 </p>

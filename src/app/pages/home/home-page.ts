@@ -5,10 +5,11 @@ import { TournamentStore } from '../../data/tournament-store';
 import { buildDemoTournament, DEMO_PIN } from '../../data/demo';
 import { ToastService } from '../../ui/toast.service';
 import { ConfirmService } from '../../ui/confirm.service';
+import { Icon } from '../../ui/icon';
 
 @Component({
   selector: 'app-home-page',
-  imports: [Brand, RouterLink],
+  imports: [Brand, RouterLink, Icon],
   template: `
     <main class="mx-auto flex min-h-dvh max-w-3xl flex-col px-4 py-10 sm:py-16">
       <section class="animate-rise">
@@ -69,7 +70,7 @@ import { ConfirmService } from '../../ui/confirm.service';
                       title="Quitar de la lista"
                       (click)="hide(r.id, r.name)"
                     >
-                      ✕
+                      <app-icon name="close" />
                     </button>
                   }
                 </li>

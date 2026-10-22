@@ -2,10 +2,12 @@ import { Component, computed, inject, input } from '@angular/core';
 import { TournamentSession } from '../../data/tournament-session';
 import { Id, Match } from '../../domain/types';
 import { lineup } from '../../domain/tournament';
+import { Icon } from '../../ui/icon';
 
 /** What happened in a finished match: who played, who scored, penalties and incidents. */
 @Component({
   selector: 'app-match-summary',
+  imports: [Icon],
   template: `
     <div class="mb-2 animate-rise border-l-4 border-line bg-pitch px-4 py-3 text-sm">
       @if (extra(); as e) {
@@ -19,7 +21,7 @@ import { lineup } from '../../domain/tournament';
             @if (side.scorers.length) {
               <ul class="mt-2 space-y-0.5">
                 @for (s of side.scorers; track s.name) {
-                  <li>⚽ {{ s.name }}@if (s.goals > 1) {<span class="text-mist"> ×{{ s.goals }}</span>}</li>
+                  <li><app-icon name="ball" class="mr-1 text-mist" /> {{ s.name }}@if (s.goals > 1) {<span class="text-mist"> ×{{ s.goals }}</span>}</li>
                 }
               </ul>
             }

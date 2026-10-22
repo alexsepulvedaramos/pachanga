@@ -5,6 +5,7 @@ import { Id, Match } from '../../domain/types';
 import { ClubCrest } from '../../ui/club-crest';
 import { CountUp } from '../../ui/count-up';
 import { LeagueRecapViewer } from './league-recap-viewer';
+import { Icon } from '../../ui/icon';
 
 type Slide = 'table' | 'numbers' | 'next';
 const SLIDES: Slide[] = ['table', 'numbers', 'next'];
@@ -19,7 +20,7 @@ const ZONE_COLOR: Record<LeagueZone, string> = { direct: 'bg-volt', playoff: 'bg
  */
 @Component({
   selector: 'app-league-recap',
-  imports: [ClubCrest, CountUp],
+  imports: [ClubCrest, CountUp, Icon],
   host: {
     '(document:keydown.arrowright)': 'next()',
     '(document:keydown.space)': '$event.preventDefault(); next()',
@@ -50,7 +51,7 @@ const ZONE_COLOR: Record<LeagueZone, string> = { direct: 'bg-volt', playoff: 'bg
           <div class="mt-3 flex items-center justify-between gap-3">
             <p class="eyebrow truncate text-chalk/80">{{ session.tournament()?.name }} · Fin de la liguilla</p>
             <button type="button" class="px-2 text-2xl text-chalk/80 hover:text-chalk" aria-label="Cerrar el resumen" (click)="$event.stopPropagation(); viewer.close()">
-              ✕
+              <app-icon name="close" />
             </button>
           </div>
         </div>

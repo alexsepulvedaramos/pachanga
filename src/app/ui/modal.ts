@@ -1,11 +1,13 @@
 import { Component, input, OnDestroy, OnInit, output } from '@angular/core';
+import { Icon } from './icon';
 
 /**
  * Sheet over the page: slides up from the bottom on phones, centred on wider screens. Closes with
- * the ✕, a tap outside or Escape; the page behind doesn't scroll while it's open.
+ * the close button, a tap outside or Escape; the page behind doesn't scroll while it's open.
  */
 @Component({
   selector: 'app-modal',
+  imports: [Icon],
   host: { '(document:keydown.escape)': 'closed.emit()' },
   template: `
     <div
@@ -26,7 +28,7 @@ import { Component, input, OnDestroy, OnInit, output } from '@angular/core';
             }
             <p class="heading truncate text-2xl">{{ heading() }}</p>
           </div>
-          <button type="button" class="px-2 text-2xl text-mist hover:text-chalk" aria-label="Cerrar" (click)="closed.emit()">✕</button>
+          <button type="button" class="px-2 text-2xl text-mist hover:text-chalk" aria-label="Cerrar" (click)="closed.emit()"><app-icon name="close" /></button>
         </div>
         <div class="p-5">
           <ng-content />
