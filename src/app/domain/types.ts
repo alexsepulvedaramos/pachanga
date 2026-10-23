@@ -52,6 +52,8 @@ export interface Match {
   awayPens?: number | null;
   /** Partner drawn for a solo team for this single match, keyed by team id. */
   standIns?: Record<Id, Id>;
+  /** Stand-ins the admin discarded for this match by drawing again, keyed by team id. */
+  redrawn?: Record<Id, Id[]>;
   goals?: Goal[];
   incidents?: Incident[];
   /** Player who entered the result from their phone; missing when the admin did. */

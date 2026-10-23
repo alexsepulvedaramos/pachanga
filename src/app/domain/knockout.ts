@@ -141,6 +141,25 @@ export function loserOf(match: Match): Id | null {
   return winner === match.homeId ? match.awayId : match.homeId;
 }
 
+/**
+ * Whether a team is still in the knockout: it qualified and has not been knocked out. Semi-final
+ * losers stay in until the third-place match is played, if there is one.
+ */
+export function teamAlive(ranking: readonly Id[], matches: readonly Match[], teamId: Id): boolean {
+  const format = knockoutFormat(ranking.length);
+  const position = ranking.indexOf(teamId) + 1;
+  if (position > format.direct && !format.playoff.includes(position)) return false;
+  const involved = matches.filter((m) => m.phase !== 'group' && [m.homeId, m.awayId].includes(teamId));
+  const lost = (m: Match) => !!winnerOf(m) && winnerOf(m) !== teamId;
+  // The last match ends it either way.
+  return !involved.some(
+    (m) =>
+      ((m.phase === 'playoff' || m.phase === 'quarter') && lost(m)) ||
+      (m.phase === 'semi' && lost(m) && !format.thirdPlace) ||
+      ((m.phase === 'third' || m.phase === 'final') && !!winnerOf(m)),
+  );
+}
+
 function knockoutMatch(id: Id, phase: Phase, homeId: Id, awayId: Id): Match {
   return { id, phase, homeId, awayId, status: 'pending', homeGoals: null, awayGoals: null };
 }

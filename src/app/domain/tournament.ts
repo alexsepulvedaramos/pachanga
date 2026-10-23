@@ -23,8 +23,10 @@ import {
   nextKnockoutMatches,
   pendingDecision,
   semiFinalists,
+  teamAlive,
   winnerOf,
 } from './knockout';
+import { groupStake, knockoutStake, lowestBy, Stake } from './stand-in';
 
 export const MIN_PARTICIPANTS = MIN_TEAMS * 2;
 export const MAX_PARTICIPANTS = MAX_TEAMS * 2;
@@ -275,24 +277,9 @@ function teamStillIn(t: Tournament, participantId: Id): boolean {
   const p = t.participants.find((x) => x.id === participantId);
   if (!p || p.disqualified || t.stage === 'finished') return false;
   if (t.stage !== 'knockout' || !t.groupRanking) return true;
-  const format = knockoutFormat(t.teams.length);
-  const alive = (teamId: Id) => {
-    const position = t.groupRanking!.indexOf(teamId) + 1;
-    if (position > format.direct && !format.playoff.includes(position)) return false;
-    const involved = t.matches.filter((m) => m.phase !== 'group' && [m.homeId, m.awayId].includes(teamId));
-    const lost = (m: Match) => !!winnerOf(m) && winnerOf(m) !== teamId;
-    // Semi-final losers still play for third place, if there is one; the last match ends it either way.
-    const out = involved.some(
-      (m) =>
-        ((m.phase === 'playoff' || m.phase === 'quarter') && lost(m)) ||
-        (m.phase === 'semi' && lost(m) && !format.thirdPlace) ||
-        ((m.phase === 'third' || m.phase === 'final') && !!winnerOf(m)),
-    );
-    return !out;
-  };
   return t.teams
     .filter((x) => x.memberIds.includes(participantId) || x.knockoutPartnerId === participantId)
-    .some((x) => alive(x.id));
+    .some((x) => teamAlive(t.groupRanking!, t.matches, x.id));
 }
 
 export function nextMatch(t: Tournament): Match | null {
@@ -329,8 +316,16 @@ function needsStandIn(t: Tournament, m: Match, teamId: Id): boolean {
 }
 
 /**
- * A random partner among the participants not playing this match, preferring those who have
- * partnered this team the fewest times so far.
+ * A partner among the participants not playing this match, so that whoever has the least to gain
+ * or lose from it comes first. Each criterion only separates those tied on the one before, and a
+ * lone candidate is always taken: the draw never fails while someone is free.
+ * 1. The stake of their team in the match: none, far from it, or involved.
+ * 2. Times they have been a stand-in so far.
+ * 3. They didn't just play the match before.
+ * 4. They don't play the match right after.
+ * 5. Matches played so far, stand-in ones included.
+ * 6. Times they have partnered this team.
+ * Then luck. A redraw never brings back someone already discarded for this match, if anyone else is free.
  */
 function drawStandIn(t: Tournament, m: Match, teamId: Id, rng: Rng): Id {
   const busy = new Set([
@@ -338,22 +333,43 @@ function drawStandIn(t: Tournament, m: Match, teamId: Id, rng: Rng): Id {
     ...lineup(t, m, m.awayId),
     ...Object.values(m.standIns ?? {}),
   ]);
-  const candidates = t.participants.filter((p) => !p.disqualified && !busy.has(p.id));
-  if (candidates.length === 0) throw new TournamentError('No hay nadie libre para hacer pareja.');
-  const timesUsed = (id: Id) => t.matches.filter((x) => x.standIns?.[teamId] === id).length;
-  const fewest = Math.min(...candidates.map((p) => timesUsed(p.id)));
-  return pick(
-    candidates.filter((p) => timesUsed(p.id) === fewest),
-    rng,
-  ).id;
+  const free = t.participants.filter((p) => !p.disqualified && !busy.has(p.id));
+  if (free.length === 0) throw new TournamentError('No hay nadie libre para hacer pareja.');
+  const discarded = new Set(m.redrawn?.[teamId] ?? []);
+  const candidates = free.filter((p) => !discarded.has(p.id));
+
+  const index = t.matches.findIndex((x) => x.id === m.id);
+  const before = t.matches[index - 1];
+  const after = t.matches[index + 1];
+  const stake = (id: Id): Stake => {
+    const own = teamOf(t, id).id;
+    if (m.phase === 'group') return groupStake(own, m, teamIds(t), groupMatches(t));
+    return t.groupRanking ? knockoutStake(own, m, t.groupRanking, t.matches) : 2;
+  };
+  const invited = (id: Id) => t.matches.filter((x) => Object.values(x.standIns ?? {}).includes(id)).length;
+  const played = (id: Id) => t.matches.filter((x) => x.status === 'done' && playsIn(t, x, id)).length;
+  const withTeam = (id: Id) => t.matches.filter((x) => x.standIns?.[teamId] === id).length;
+  const key = (p: Participant) => [
+    stake(p.id),
+    invited(p.id),
+    before && playsIn(t, before, p.id) ? 1 : 0,
+    after && playsIn(t, after, p.id) ? 1 : 0,
+    played(p.id),
+    withTeam(p.id),
+  ];
+  return pick(lowestBy(candidates.length ? candidates : free, key), rng).id;
 }
+
+const teamIds = (t: Tournament) => t.teams.map((x) => x.id);
 
 export function redrawStandIn(t: Tournament, matchId: Id, teamId: Id, rng: Rng): Tournament {
   const m = match(t, matchId);
   if (m.status === 'done') throw new TournamentError('Ese partido ya está terminado.');
   const rest = { ...m.standIns };
+  const previous = rest[teamId];
   delete rest[teamId];
-  const cleared = { ...m, standIns: rest };
+  const redrawn = previous ? { ...m.redrawn, [teamId]: [...(m.redrawn?.[teamId] ?? []), previous] } : m.redrawn;
+  const cleared: Match = { ...m, standIns: rest, ...(redrawn ? { redrawn } : {}) };
   const standIn = drawStandIn(t, cleared, teamId, rng);
   return replaceMatch(t, { ...cleared, standIns: { ...rest, [teamId]: standIn } });
 }
