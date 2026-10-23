@@ -507,6 +507,17 @@ export function disqualify(t: Tournament, participantId: Id): Tournament {
   return { ...t, participants };
 }
 
+/** Changes a player's name (a typo, a nickname). Everything refers to people by id, so nothing else moves. */
+export function renameParticipant(t: Tournament, participantId: Id, name: string): Tournament {
+  const p = participant(t, participantId);
+  const clean = name.trim().replace(/\s+/g, ' ');
+  if (!clean) throw new TournamentError('Escribe el nombre del jugador.');
+  if (t.participants.some((x) => x.id !== p.id && x.name.toLowerCase() === clean.toLowerCase())) {
+    throw new TournamentError(`Ya hay alguien que se llama ${clean}.`);
+  }
+  return { ...t, participants: t.participants.map((x) => (x.id === p.id ? { ...x, name: clean } : x)) };
+}
+
 /**
  * Lets the admin keep someone out of (or put them back into) the stand-in draw. It only takes
  * effect on the draws from then on: whoever is already drawn for a match stays until it's redrawn.

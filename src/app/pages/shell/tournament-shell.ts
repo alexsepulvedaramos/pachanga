@@ -10,6 +10,7 @@ import { DEMO_PREFIX } from '../../data/tournament-repository';
 import { Gala } from '../gala/gala';
 import { Icon } from '../../ui/icon';
 import { FormatInfo } from './format-info';
+import { PlayerNames } from './player-names';
 import { GalaViewer } from '../gala/gala-viewer';
 import { LeagueRecap } from '../league/league-recap';
 import { LeagueRecapViewer } from '../league/league-recap-viewer';
@@ -29,7 +30,7 @@ const ICONS = {
 
 @Component({
   selector: 'app-tournament-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Brand, StageBadge, ShareButtons, Gala, LeagueRecap, ChoiceMoment, IdentityGate, FormatInfo, Icon],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Brand, StageBadge, ShareButtons, Gala, LeagueRecap, ChoiceMoment, IdentityGate, FormatInfo, PlayerNames, Icon],
   providers: [TournamentSession, GalaViewer, LeagueRecapViewer, ChoiceMomentViewer],
   template: `
     @if (session.loading()) {
@@ -67,6 +68,16 @@ const ICONS = {
               (click)="info.set(true)"
             >
               <app-icon name="info" size="1.25rem" />
+            </button>
+          }
+          @if (session.isAdmin()) {
+            <button
+              type="button"
+              class="grid size-10 shrink-0 place-items-center bg-line text-mist hover:text-chalk sm:size-auto sm:px-3 sm:py-1"
+              aria-label="Cambiar nombres"
+              (click)="names.set(true)"
+            >
+              <app-icon name="pencil" size="1.25rem" />
             </button>
           }
           <button
@@ -171,6 +182,9 @@ const ICONS = {
         <router-outlet />
       </main>
 
+      @if (names() && session.isAdmin()) {
+        <app-player-names (closed)="names.set(false)" />
+      }
       @if (info()) {
         <app-format-info (closed)="info.set(false)" />
       }
@@ -197,6 +211,7 @@ export class TournamentShell {
   protected readonly unlocking = signal(false);
   protected readonly sharing = signal(false);
   protected readonly info = signal(false);
+  protected readonly names = signal(false);
   /** Demos live in this browser only: a link to one opens nothing elsewhere. */
   protected readonly isDemo = computed(() => !!this.session.tournament()?.id.startsWith(DEMO_PREFIX));
   protected readonly link = computed(() => {
