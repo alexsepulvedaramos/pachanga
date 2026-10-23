@@ -4,6 +4,8 @@ export interface Participant {
   id: Id;
   name: string;
   disqualified?: boolean;
+  /** Kept out of the stand-in draw by the admin (tired, not fit to play); still plays for their own team. */
+  noStandIn?: boolean;
 }
 
 export interface Team {
@@ -52,6 +54,8 @@ export interface Match {
   awayPens?: number | null;
   /** Partner drawn for a solo team for this single match, keyed by team id. */
   standIns?: Record<Id, Id>;
+  /** Stand-ins the admin discarded for this match by drawing again, keyed by team id. */
+  redrawn?: Record<Id, Id[]>;
   goals?: Goal[];
   incidents?: Incident[];
   /** Player who entered the result from their phone; missing when the admin did. */

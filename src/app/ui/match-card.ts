@@ -43,6 +43,11 @@ import { lineup, unavailableFor } from '../domain/tournament';
               </li>
             }
           </ul>
+          @if (side.redrawn.length) {
+            <p class="mt-1 text-mist" [class]="big() ? 'text-base' : 'text-xs'">
+              Invitado sorteado de nuevo · antes: {{ side.redrawn.join(', ') }}
+            </p>
+          }
           @if (side.unavailable.length && m.status !== 'done') {
             <div class="mt-2" [class]="big() ? 'text-lg' : 'text-xs'">
               <p class="eyebrow text-flare" [class.text-sm]="big()">No disponibles</p>
@@ -86,6 +91,7 @@ export class MatchCard {
           name: this.session.personName(id),
           guest: !team.memberIds.includes(id),
         })),
+        redrawn: (m.redrawn?.[teamId] ?? []).map((id) => this.session.personName(id)),
         unavailable: unavailable.filter((x) => x.teamId === teamId),
       };
     });

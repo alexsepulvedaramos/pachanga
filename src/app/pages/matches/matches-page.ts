@@ -18,6 +18,7 @@ import {
   playsIn,
   redrawStandIn,
   reopenMatch,
+  setStandInAvailable,
   startMatch,
   halfMinutesOf,
   totalMatchCount,
@@ -128,6 +129,34 @@ import { Icon } from '../../ui/icon';
               </div>
             }
           </section>
+        }
+
+        @if (session.isAdmin() && t.stage !== 'finished' && hasSolo()) {
+          <details class="mt-4 bg-pitch px-4 py-3">
+            <summary class="eyebrow cursor-pointer text-mist">
+              Quién puede hacer de invitado
+              @if (unavailableCount()) {
+                <span class="text-flare">· {{ unavailableCount() }} fuera</span>
+              }
+            </summary>
+            <p class="mt-2 text-xs text-mist">
+              Quita a quien no esté para jugar (cansado, con copas de más…). Sigue jugando con su pareja; solo queda fuera del sorteo de invitados. Vale para los sorteos que vengan: al que ya salió se le cambia con «Otro invitado».
+            </p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              @for (p of standInCandidates(); track p.id) {
+                <button
+                  type="button"
+                  class="tag px-3 py-1.5"
+                  [class]="p.noStandIn ? 'bg-flare/15 text-flare line-through' : 'bg-line text-chalk'"
+                  [attr.aria-pressed]="!p.noStandIn"
+                  [disabled]="session.saving()"
+                  (click)="toggleStandIn(p.id, !!p.noStandIn)"
+                >
+                  {{ p.name }}
+                </button>
+              }
+            </div>
+          </details>
         }
 
         <!-- Fixture -->
@@ -319,6 +348,21 @@ export class MatchesPage {
 
   protected async start(matchId: Id): Promise<void> {
     await this.session.apply((t, rng) => startMatch(t, matchId, rng));
+  }
+
+  protected readonly hasSolo = computed(() => {
+    const t = this.session.tournament();
+    return !!t && t.teams.some((x) => isSolo(t, x.id));
+  });
+
+  protected readonly standInCandidates = computed(
+    () => this.session.tournament()?.participants.filter((p) => !p.disqualified) ?? [],
+  );
+
+  protected readonly unavailableCount = computed(() => this.standInCandidates().filter((p) => p.noStandIn).length);
+
+  protected async toggleStandIn(participantId: Id, currentlyOut: boolean): Promise<void> {
+    await this.session.apply((t) => setStandInAvailable(t, participantId, currentlyOut));
   }
 
   protected async redraw(matchId: Id, teamId: Id): Promise<void> {

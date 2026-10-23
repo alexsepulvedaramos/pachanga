@@ -105,8 +105,8 @@ interface Reveal {
                 <p class="eyebrow text-gold">Jugador suelto</p>
                 <p class="heading mt-1 text-4xl">{{ s.name }} · <span [style.color]="color(t, s.club)">{{ s.club }}</span></p>
                 <p class="mt-2 text-sm text-mist">
-                  En cada partido se le sortea un compañero entre los que no juegan. En semis, uno fijo de
-                  entre los eliminados.
+                  En cada partido, final incluida, se le sortea un compañero entre los que no juegan. El
+                  invitado no cuenta como campeón.
                 </p>
               </div>
             }

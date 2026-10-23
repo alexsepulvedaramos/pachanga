@@ -41,8 +41,8 @@ function emptyRow(teamId) {
 function isScored(match2) {
   return match2.status === "done" && match2.homeGoals !== null && match2.awayGoals !== null;
 }
-function tally(teamIds, matches) {
-  const rows = new Map(teamIds.map((id) => [id, emptyRow(id)]));
+function tally(teamIds2, matches) {
+  const rows = new Map(teamIds2.map((id) => [id, emptyRow(id)]));
   for (const match2 of matches) {
     if (!isScored(match2)) continue;
     const home = rows.get(match2.homeId);
@@ -72,9 +72,9 @@ function apply(row, scored, conceded) {
     row.form.push("L");
   }
 }
-function computeStandings(teamIds, groupMatches2, tiebreakers, seed) {
-  const rows = tally(teamIds, groupMatches2);
-  const lotOrder = shuffle([...teamIds].sort(), seededRng(seed));
+function computeStandings(teamIds2, groupMatches2, tiebreakers, seed) {
+  const rows = tally(teamIds2, groupMatches2);
+  const lotOrder = shuffle([...teamIds2].sort(), seededRng(seed));
   const metric = (criterion, tied) => {
     switch (criterion) {
       case "goalDifference":
@@ -104,8 +104,8 @@ function computeStandings(teamIds, groupMatches2, tiebreakers, seed) {
     const values = metric(criterion, tied);
     return groupByValue(tied, values).flatMap((block) => resolve(block, rest));
   };
-  const byPoints = new Map(teamIds.map((id) => [id, rows.get(id).points]));
-  const ordered = groupByValue([...teamIds], byPoints).flatMap(
+  const byPoints = new Map(teamIds2.map((id) => [id, rows.get(id).points]));
+  const ordered = groupByValue([...teamIds2], byPoints).flatMap(
     (block) => resolve(block, tiebreakers)
   );
   return ordered.map((id) => rows.get(id));
@@ -195,6 +195,16 @@ function loserOf(match2) {
   const winner = winnerOf(match2);
   if (!winner) return null;
   return winner === match2.homeId ? match2.awayId : match2.homeId;
+}
+function teamAlive(ranking, matches, teamId) {
+  const format = knockoutFormat(ranking.length);
+  const position = ranking.indexOf(teamId) + 1;
+  if (position > format.direct && !format.playoff.includes(position)) return false;
+  const involved = matches.filter((m) => m.phase !== "group" && [m.homeId, m.awayId].includes(teamId));
+  const lost = (m) => !!winnerOf(m) && winnerOf(m) !== teamId;
+  return !involved.some(
+    (m) => (m.phase === "playoff" || m.phase === "quarter") && lost(m) || m.phase === "semi" && lost(m) && !format.thirdPlace || (m.phase === "third" || m.phase === "final") && !!winnerOf(m)
+  );
 }
 function knockoutMatch(id, phase, homeId, awayId) {
   return { id, phase, homeId, awayId, status: "pending", homeGoals: null, awayGoals: null };
@@ -295,6 +305,50 @@ function pairUp(prefix, phase, teams, opponentId, orderChooserFirst) {
   return ordered.map(([home, away], i) => knockoutMatch(`${prefix}${i + 1}`, phase, home, away));
 }
 
+// src/app/domain/stand-in.ts
+function groupStake(candidateId, m, teamIds2, groupMatches2) {
+  const rows = tally(teamIds2, groupMatches2);
+  const reach = (id) => {
+    const points = rows.get(id)?.points ?? 0;
+    const left = groupMatches2.filter((x) => x.status !== "done" && (x.homeId === id || x.awayId === id));
+    return { points, max: points + POINTS.win * left.length };
+  };
+  const candidate = reach(candidateId);
+  const rivals = [m.homeId, m.awayId].map(reach);
+  if (rivals.every((r) => candidate.points > r.max || candidate.max < r.points)) return 0;
+  return rivals.every((r) => Math.abs(candidate.points - r.points) > POINTS.win) ? 1 : 2;
+}
+function knockoutStake(candidateId, m, ranking, matches) {
+  if (m.phase === "third" || m.phase === "final") return 0;
+  if (!teamAlive(ranking, matches, candidateId)) return 0;
+  if (m.phase !== "quarter") return 2;
+  const quarters = matches.filter((x) => x.phase === "quarter");
+  const half = (quarter) => Math.floor(quarters.indexOf(quarter) / 2);
+  const own = quarters.find((x) => x.homeId === candidateId || x.awayId === candidateId);
+  return own && half(own) === half(m) ? 2 : 1;
+}
+function lowestBy(items, keyOf) {
+  let best = [];
+  let bestKey = null;
+  for (const item of items) {
+    const key = keyOf(item);
+    const order = bestKey ? compareKeys(key, bestKey) : -1;
+    if (order < 0) {
+      best = [item];
+      bestKey = key;
+    } else if (order === 0) {
+      best.push(item);
+    }
+  }
+  return best;
+}
+function compareKeys(a, b) {
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return a[i] - b[i];
+  }
+  return 0;
+}
+
 // src/app/domain/tournament.ts
 var MIN_PARTICIPANTS = MIN_TEAMS * 2;
 var MAX_PARTICIPANTS = MAX_TEAMS * 2;
@@ -368,15 +422,32 @@ function drawStandIn(t, m, teamId, rng) {
     ...lineup(t, m, m.awayId),
     ...Object.values(m.standIns ?? {})
   ]);
-  const candidates = t.participants.filter((p) => !p.disqualified && !busy.has(p.id));
-  if (candidates.length === 0) throw new TournamentError("No hay nadie libre para hacer pareja.");
-  const timesUsed = (id) => t.matches.filter((x) => x.standIns?.[teamId] === id).length;
-  const fewest = Math.min(...candidates.map((p) => timesUsed(p.id)));
-  return pick(
-    candidates.filter((p) => timesUsed(p.id) === fewest),
-    rng
-  ).id;
+  const free = t.participants.filter((p) => !p.disqualified && !p.noStandIn && !busy.has(p.id));
+  if (free.length === 0) throw new TournamentError("No hay nadie libre para hacer pareja.");
+  const discarded = new Set(m.redrawn?.[teamId] ?? []);
+  const candidates = free.filter((p) => !discarded.has(p.id));
+  const index = t.matches.findIndex((x) => x.id === m.id);
+  const before = t.matches[index - 1];
+  const after = t.matches[index + 1];
+  const stake = (id) => {
+    const own = teamOf(t, id).id;
+    if (m.phase === "group") return groupStake(own, m, teamIds(t), groupMatches(t));
+    return t.groupRanking ? knockoutStake(own, m, t.groupRanking, t.matches) : 2;
+  };
+  const invited = (id) => t.matches.filter((x) => Object.values(x.standIns ?? {}).includes(id)).length;
+  const played = (id) => t.matches.filter((x) => x.status === "done" && playsIn(t, x, id)).length;
+  const withTeam = (id) => t.matches.filter((x) => x.standIns?.[teamId] === id).length;
+  const key = (p) => [
+    stake(p.id),
+    invited(p.id),
+    before && playsIn(t, before, p.id) ? 1 : 0,
+    after && playsIn(t, after, p.id) ? 1 : 0,
+    played(p.id),
+    withTeam(p.id)
+  ];
+  return pick(lowestBy(candidates.length ? candidates : free, key), rng).id;
 }
+var teamIds = (t) => t.teams.map((x) => x.id);
 function recordResult(t, matchId, result) {
   const m = match(t, matchId);
   validateResult(t, m, result);
@@ -465,6 +536,11 @@ function assertEditable(t, m) {
     throw new TournamentError("Ya se ha jugado la siguiente ronda con este resultado.");
   }
 }
+function teamOf(t, participantId) {
+  const found = t.teams.find((x) => x.memberIds.includes(participantId));
+  if (!found) throw new TournamentError(`${participant(t, participantId).name} no est\xE1 en ninguna pareja.`);
+  return found;
+}
 function replaceMatch(t, updated) {
   return { ...t, matches: t.matches.map((m) => m.id === updated.id ? updated : m) };
 }
@@ -522,7 +598,6 @@ function sync(t) {
   for (; ; ) {
     const created = nextKnockoutMatches(next.groupRanking, next.knockout, next.matches);
     if (created.length === 0) break;
-    if (created[0].phase === "semi") next = drawKnockoutPartners(next);
     next = { ...next, matches: [...next.matches, ...created] };
   }
   const final = next.matches.find((m) => m.phase === "final");
@@ -530,22 +605,6 @@ function sync(t) {
   const thirdDone = third ? !!winnerOf(third) : !knockoutFormat(next.teams.length).thirdPlace;
   if (final && winnerOf(final) && thirdDone) next = { ...next, stage: "finished" };
   return next;
-}
-function drawKnockoutPartners(t) {
-  const semis = semiFinalists(t.groupRanking, t.matches) ?? [];
-  const eliminatedTeams = t.teams.filter((x) => !semis.includes(x.id));
-  const pool = eliminatedTeams.flatMap((x) => activeMembers(t, x.id));
-  const rng = seededRng(t.config.seed ^ 24301);
-  const taken = /* @__PURE__ */ new Set();
-  const teams = t.teams.map((x) => {
-    if (!semis.includes(x.id) || !isSolo(t, x.id) || x.knockoutPartnerId) return x;
-    const free = pool.filter((id) => !taken.has(id));
-    if (free.length === 0) return x;
-    const partnerId = pick(free, rng);
-    taken.add(partnerId);
-    return { ...x, knockoutPartnerId: partnerId };
-  });
-  return { ...t, teams };
 }
 export {
   playerMakeChoice,

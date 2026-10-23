@@ -195,7 +195,7 @@ function champions(t) {
   const final = t.matches.find((m) => m.phase === "final");
   const winner = final && winnerOf(final);
   if (!final || !winner) return null;
-  return lineup(t, final, winner);
+  return lineup(t, final, winner).filter((id) => team(t, winner).memberIds.includes(id));
 }
 function topScorers(t) {
   const counts = /* @__PURE__ */ new Map();

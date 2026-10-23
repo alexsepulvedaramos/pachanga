@@ -227,7 +227,11 @@ describe('full tournament', () => {
         t = playThrough(t, rng);
         expect(t.stage).toBe('finished');
         expect(t.matches).toHaveLength(totalMatchCount(teams));
-        expect(champions(t)).toHaveLength(2);
+        // Only the members of the winning team: a stand-in doesn't count as a champion.
+        const champs = champions(t)!;
+        const winner = t.teams.find((x) => champs.every((id) => x.memberIds.includes(id)))!;
+        expect(champs).toEqual(winner.memberIds.filter((id) => champs.includes(id)));
+        expect(champs.length).toBeGreaterThanOrEqual(1);
         expect(estimatedRemainingMinutes(t)).toBe(0);
 
         for (const m of t.matches) {
@@ -241,21 +245,34 @@ describe('full tournament', () => {
     });
   }
 
-  it('gives the solo player a fixed knockout partner from the eliminated players', () => {
+  it('draws a stand-in for the solo player in every knockout match, not a fixed partner', () => {
     for (let seed = 1; seed <= 30; seed++) {
       const rng = seededRng(seed);
       const t = playThrough(drawAll(newTournament(11, seed), rng), rng);
       const solo = t.teams.find((x) => isSolo(t, x.id))!;
-      const semi = t.matches.find((m) => m.phase === 'semi' && [m.homeId, m.awayId].includes(solo.id));
-      if (!semi) continue;
-      const eliminated = t.matches
-        .filter((m) => m.phase === 'playoff')
-        .map((m) => (winnerOf(m) === m.homeId ? m.awayId : m.homeId));
-      const pool = t.teams.filter((x) => eliminated.includes(x.id)).flatMap((x) => x.memberIds);
-      expect(pool).toContain(solo.knockoutPartnerId);
+      const late = t.matches.filter(
+        (m) => m.phase !== 'group' && m.phase !== 'playoff' && [m.homeId, m.awayId].includes(solo.id),
+      );
+      if (late.length === 0) continue;
+      expect(solo.knockoutPartnerId).toBeUndefined();
+      for (const m of late) expect(m.standIns?.[solo.id]).toBeTruthy();
       return;
     }
     throw new Error('No seed sent the solo team to the semi-finals');
+  });
+
+  it('does not count a stand-in as a champion', () => {
+    for (let seed = 1; seed <= 60; seed++) {
+      const rng = seededRng(seed);
+      const t = playThrough(drawAll(newTournament(11, seed), rng), rng);
+      const solo = t.teams.find((x) => isSolo(t, x.id))!;
+      const final = t.matches.find((m) => m.phase === 'final')!;
+      if (winnerOf(final) !== solo.id) continue;
+      expect(champions(t)).toEqual(solo.memberIds);
+      expect(lineup(t, final, solo.id)).toHaveLength(2);
+      return;
+    }
+    throw new Error('No seed made the solo team champion');
   });
 
   it('draws one leftover wheel entry with an odd number of players', () => {
