@@ -48,7 +48,7 @@ const SLIDE_MS: Record<GalaSlide['kind'], number> = {
         <div class="absolute inset-x-0 top-0 z-20 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <div class="flex gap-1">
             @for (s of slides(); track $index) {
-              <div class="h-1 flex-1 overflow-hidden bg-chalk/25">
+              <div class="h-[max(0.25rem,0.5vmin)] flex-1 overflow-hidden bg-chalk/25">
                 @if ($index < index() || ($index === index() && (live() || finished()))) {
                   <div class="h-full bg-chalk"></div>
                 } @else if ($index === index() && !paused()) {
@@ -62,14 +62,14 @@ const SLIDE_MS: Record<GalaSlide['kind'], number> = {
             }
           </div>
           <div class="mt-3 flex items-center justify-between gap-3">
-            <p class="eyebrow truncate text-chalk/80">{{ t.name }}</p>
+            <p class="eyebrow gala-label truncate text-chalk/80">{{ t.name }}</p>
             <div class="flex items-center gap-2">
               @if (live() && !ended()) {
-                <span class="tag animate-pulse-live bg-flare text-ink">En directo</span>
+                <span class="tag gala-label animate-pulse-live bg-flare px-[0.8em] text-ink">En directo</span>
               }
               <button
                 type="button"
-                class="px-2 text-2xl text-chalk/80 hover:text-chalk"
+                class="px-2 text-[max(1.5rem,5vmin)] text-chalk/80 hover:text-chalk"
                 aria-label="Cerrar la gala"
                 (click)="$event.stopPropagation(); viewer.close()"
               >
@@ -81,26 +81,26 @@ const SLIDE_MS: Record<GalaSlide['kind'], number> = {
 
         @for (k of keys(); track k) {
           @let slide = current()!;
-          <section class="absolute inset-0 flex flex-col items-center justify-center px-6 pb-28 pt-24 text-center" aria-live="polite">
+          <section class="absolute inset-0 flex flex-col items-center justify-center px-[5vmin] pb-[max(7rem,19vmin)] pt-[max(6rem,14vmin)] text-center" aria-live="polite">
             @switch (slide.kind) {
               @case ('intro') {
                 <div class="absolute inset-0 -z-10 bg-[linear-gradient(115deg,var(--color-pitch)_0_45%,var(--color-ink)_45%_100%)]"></div>
-                <p class="eyebrow animate-rise text-cyan">Así fue</p>
-                <h2 class="heading mt-3 animate-slam text-[clamp(3rem,14vw,9rem)] [animation-delay:150ms]">{{ t.name }}</h2>
-                <div class="mt-10 grid w-full max-w-xl grid-cols-2 gap-3">
-                  <div class="cut animate-pop bg-volt p-4 text-ink [animation-delay:700ms]">
-                    <p class="heading text-[clamp(3rem,12vw,6rem)] tabular-nums"><app-count-up [value]="slide.matches" [delay]="700" /></p>
-                    <p class="eyebrow">Partidos</p>
+                <p class="eyebrow gala-label animate-rise text-cyan">Así fue</p>
+                <h2 class="heading gala-title mt-3 animate-slam [animation-delay:150ms]">{{ t.name }}</h2>
+                <div class="mt-[5vmin] grid w-full max-w-[min(90vw,110vmin)] grid-cols-2 gap-[2vmin]">
+                  <div class="cut animate-pop bg-volt p-[2.5vmin] text-ink [animation-delay:700ms]">
+                    <p class="heading gala-number tabular-nums"><app-count-up [value]="slide.matches" [delay]="700" /></p>
+                    <p class="eyebrow gala-label">Partidos</p>
                   </div>
-                  <div class="cut animate-pop bg-cyan p-4 text-ink [animation-delay:1000ms]">
-                    <p class="heading text-[clamp(3rem,12vw,6rem)] tabular-nums"><app-count-up [value]="slide.goals" [delay]="1000" /></p>
-                    <p class="eyebrow">Goles</p>
+                  <div class="cut animate-pop bg-cyan p-[2.5vmin] text-ink [animation-delay:1000ms]">
+                    <p class="heading gala-number tabular-nums"><app-count-up [value]="slide.goals" [delay]="1000" /></p>
+                    <p class="eyebrow gala-label">Goles</p>
                   </div>
                 </div>
                 @if (slide.biggestWin; as m) {
                   <div class="mt-6 animate-rise [animation-delay:1800ms]">
-                    <p class="eyebrow text-flare">La mayor goleada</p>
-                    <p class="heading mt-1 text-[clamp(1.5rem,6vw,3rem)]">{{ score(m) }}</p>
+                    <p class="eyebrow gala-label text-flare">La mayor goleada</p>
+                    <p class="heading gala-subtitle mt-1">{{ score(m) }}</p>
                   </div>
                 }
               }
@@ -115,24 +115,24 @@ const SLIDE_MS: Record<GalaSlide['kind'], number> = {
                   class="animate-pop"
                   [club]="session.teamName(slide.teamId)"
                   [color]="clubColorOf(slide.teamId)"
-                  size="clamp(6rem, 30vw, 12rem)"
+                  size="clamp(6rem, min(30vw, 24vh), 30rem)"
                 />
-                <p class="eyebrow mt-4 flex animate-rise items-center gap-2 text-volt [animation-delay:400ms]"><app-champions-cup size="1.6rem" /> Campeones</p>
-                <h2 class="heading mt-2 animate-slam text-[clamp(3.5rem,16vw,10rem)] [animation-delay:700ms]">{{ session.teamName(slide.teamId) }}</h2>
-                <p class="mt-4 animate-rise font-display text-[clamp(1.5rem,6vw,3rem)] font-bold uppercase [animation-delay:1300ms]">
+                <p class="eyebrow gala-label mt-4 flex animate-rise items-center gap-2 text-volt [animation-delay:400ms]"><app-champions-cup size="2.2em" /> Campeones</p>
+                <h2 class="heading gala-title-xl mt-2 animate-slam [animation-delay:700ms]">{{ session.teamName(slide.teamId) }}</h2>
+                <p class="gala-subtitle mt-4 animate-rise font-display font-bold uppercase [animation-delay:1300ms]">
                   {{ names(slide.playerIds) }}
                 </p>
-                <p class="mt-6 animate-rise text-mist [animation-delay:1800ms]">Final · {{ score(slide.final) }}</p>
+                <p class="gala-text mt-6 animate-rise text-mist [animation-delay:1800ms]">Final · {{ score(slide.final) }}</p>
               }
 
               @case ('goldenBoot') {
                 <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_35%,#ffc83d33,var(--color-ink)_65%)]"></div>
-                <app-golden-boot class="animate-pop" size="clamp(7rem, 32vw, 12rem)" />
-                <p class="eyebrow mt-4 animate-rise text-gold [animation-delay:400ms]">
+                <app-golden-boot class="animate-pop" size="clamp(7rem, min(32vw, 26vh), 30rem)" />
+                <p class="eyebrow gala-label mt-4 animate-rise text-gold [animation-delay:400ms]">
                   Bota de Oro{{ slide.participantIds.length > 1 ? ' compartida' : '' }}
                 </p>
-                <h2 class="heading mt-2 animate-slam text-[clamp(3rem,14vw,9rem)] [animation-delay:800ms]">{{ names(slide.participantIds) }}</h2>
-                <p class="heading mt-6 animate-rise text-[clamp(2.5rem,10vw,6rem)] text-gold [animation-delay:1400ms]">
+                <h2 class="heading gala-title mt-2 animate-slam [animation-delay:800ms]">{{ names(slide.participantIds) }}</h2>
+                <p class="heading gala-title-xl mt-6 animate-rise text-gold [animation-delay:1400ms]">
                   <app-count-up [value]="slide.goals" [delay]="1400" /> {{ slide.goals === 1 ? 'gol' : 'goles' }}
                 </p>
               }
@@ -145,27 +145,27 @@ const SLIDE_MS: Record<GalaSlide['kind'], number> = {
         }
 
         <!-- Controls -->
-        <div class="absolute inset-x-0 bottom-0 z-20 flex items-center justify-center gap-3 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        <div class="absolute inset-x-0 bottom-0 z-20 flex items-center justify-center gap-[1.5vmin] px-4 pb-[max(1.25rem,env(safe-area-inset-bottom),3vmin)]">
           @if (ended() || finished()) {
-            <button type="button" class="btn-primary" [disabled]="wrapped.busy()" (click)="$event.stopPropagation(); wrapped.share(t)">
+            <button type="button" class="btn-primary !px-[1.4em] !py-[0.6em] !text-[max(1rem,3.2vmin)]" [disabled]="wrapped.busy()" (click)="$event.stopPropagation(); wrapped.share(t)">
               Compartir
             </button>
           }
           @if (ended()) {
-            <button type="button" class="btn-secondary" (click)="$event.stopPropagation(); restart()">Volver a verla</button>
-            <button type="button" class="btn-secondary" (click)="$event.stopPropagation(); viewer.close()">Cerrar</button>
+            <button type="button" class="btn-secondary !px-[1.4em] !py-[0.6em] !text-[max(1rem,3.2vmin)]" (click)="$event.stopPropagation(); restart()">Volver a verla</button>
+            <button type="button" class="btn-secondary !px-[1.4em] !py-[0.6em] !text-[max(1rem,3.2vmin)]" (click)="$event.stopPropagation(); viewer.close()">Cerrar</button>
           } @else if (live() && session.isAdmin()) {
-            <button type="button" class="btn-secondary" [disabled]="index() === 0 || session.saving()" (click)="$event.stopPropagation(); previous()">←</button>
-            <button type="button" class="btn-primary min-w-48 text-lg" [disabled]="session.saving()" (click)="$event.stopPropagation(); next()">
+            <button type="button" class="btn-secondary !px-[1.4em] !py-[0.6em] !text-[max(1rem,3.2vmin)]" [disabled]="index() === 0 || session.saving()" (click)="$event.stopPropagation(); previous()">←</button>
+            <button type="button" class="btn-primary min-w-[8em] !px-[1.4em] !py-[0.6em] !text-[max(1rem,3.2vmin)]" [disabled]="session.saving()" (click)="$event.stopPropagation(); next()">
               {{ index() === slides().length - 1 ? 'Terminar la gala' : 'Siguiente →' }}
             </button>
           } @else if (live()) {
-            <p class="eyebrow text-chalk/60">En directo · el admin pasa las pantallas</p>
+            <p class="eyebrow gala-label text-chalk/60">En directo · el admin pasa las pantallas</p>
           } @else if (finished()) {
-            <button type="button" class="btn-secondary" (click)="$event.stopPropagation(); restart()">Volver a verla</button>
-            <button type="button" class="btn-secondary" (click)="$event.stopPropagation(); viewer.close()">Cerrar</button>
+            <button type="button" class="btn-secondary !px-[1.4em] !py-[0.6em] !text-[max(1rem,3.2vmin)]" (click)="$event.stopPropagation(); restart()">Volver a verla</button>
+            <button type="button" class="btn-secondary !px-[1.4em] !py-[0.6em] !text-[max(1rem,3.2vmin)]" (click)="$event.stopPropagation(); viewer.close()">Cerrar</button>
           } @else {
-            <p class="eyebrow text-chalk/50">Toca para avanzar</p>
+            <p class="eyebrow gala-label text-chalk/50">Toca para avanzar</p>
           }
         </div>
       </div>

@@ -21,7 +21,13 @@ const PLACE_LABELS = { 1: 'Ganador', 2: '2º puesto', 3: '3er puesto' } as const
 function timeline(place: 1 | 2 | 3) {
   const clue = place === 1 ? 1700 : 1300;
   const boom = 700 + 3 * clue;
-  return { clue, clues: [700, 700 + clue, 700 + 2 * clue], tint: boom - 500, boom, card: boom + 150 };
+  return {
+    clue,
+    clues: [700, 700 + clue, 700 + 2 * clue],
+    tint: boom - 500,
+    boom,
+    card: boom + 150,
+  };
 }
 
 /** How long a Ballon d'Or walkout takes before the card is out. */
@@ -42,7 +48,7 @@ export function walkoutMs(place: 1 | 2 | 3): number {
     .beam {
       position: absolute;
       bottom: -10%;
-      width: 42%;
+      width: min(42%, 75vh);
       height: 130%;
       transform-origin: 50% 100%;
       background: linear-gradient(to top, var(--beam), transparent 85%);
@@ -52,11 +58,15 @@ export function walkoutMs(place: 1 | 2 | 3): number {
     }
     .beam.left {
       left: 4%;
-      animation: sweep-left 2.6s ease-in-out infinite alternate, fade-in 0.8s both;
+      animation:
+        sweep-left 2.6s ease-in-out infinite alternate,
+        fade-in 0.8s both;
     }
     .beam.right {
       right: 4%;
-      animation: sweep-right 2.6s ease-in-out infinite alternate, fade-in 0.8s both;
+      animation:
+        sweep-right 2.6s ease-in-out infinite alternate,
+        fade-in 0.8s both;
     }
     .clue {
       animation: clue var(--clue) both;
@@ -70,8 +80,10 @@ export function walkoutMs(place: 1 | 2 | 3): number {
       --c3: #8a6411;
       --ink-on-card: #2b1d00;
       position: relative;
-      width: min(68vw, 20rem);
+      /* Sized by whichever of width and height runs out first, so it is as big as the screen allows. */
+      width: min(68vw, 42vh);
       aspect-ratio: 0.7;
+      container-type: inline-size;
       color: var(--ink-on-card);
       background: linear-gradient(160deg, var(--c1) 0%, var(--c2) 55%, var(--c3) 100%);
       clip-path: polygon(14% 0, 86% 0, 100% 9%, 100% 84%, 50% 100%, 0 84%, 0 9%);
@@ -82,7 +94,12 @@ export function walkoutMs(place: 1 | 2 | 3): number {
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / 0.55) 45%, transparent 60%);
+      background: linear-gradient(
+        115deg,
+        transparent 30%,
+        rgb(255 255 255 / 0.55) 45%,
+        transparent 60%
+      );
       background-size: 250% 100%;
       animation: shine 3s linear infinite;
       pointer-events: none;
@@ -100,96 +117,171 @@ export function walkoutMs(place: 1 | 2 | 3): number {
       --ink-on-card: #2a1406;
     }
     @keyframes sweep-left {
-      from { transform: rotate(-28deg); }
-      to { transform: rotate(14deg); }
+      from {
+        transform: rotate(-28deg);
+      }
+      to {
+        transform: rotate(14deg);
+      }
     }
     @keyframes sweep-right {
-      from { transform: rotate(28deg); }
-      to { transform: rotate(-14deg); }
+      from {
+        transform: rotate(28deg);
+      }
+      to {
+        transform: rotate(-14deg);
+      }
     }
     @keyframes fade-in {
-      to { opacity: 1; }
+      to {
+        opacity: 1;
+      }
     }
     @keyframes clue {
-      0% { opacity: 0; transform: scale(1.6); filter: blur(4px); }
-      15%, 80% { opacity: 1; transform: none; filter: none; }
-      100% { opacity: 0; transform: scale(0.9); }
+      0% {
+        opacity: 0;
+        transform: scale(1.6);
+        filter: blur(4px);
+      }
+      15%,
+      80% {
+        opacity: 1;
+        transform: none;
+        filter: none;
+      }
+      100% {
+        opacity: 0;
+        transform: scale(0.9);
+      }
     }
     @keyframes flash {
-      0% { opacity: 0; }
-      12% { opacity: 1; }
-      100% { opacity: 0; }
+      0% {
+        opacity: 0;
+      }
+      12% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+      }
     }
     @keyframes card-in {
-      from { opacity: 0; transform: perspective(900px) rotateY(-95deg) scale(0.6); }
-      70% { transform: perspective(900px) rotateY(12deg) scale(1.06); }
-      to { opacity: 1; transform: none; }
+      from {
+        opacity: 0;
+        transform: perspective(900px) rotateY(-95deg) scale(0.6);
+      }
+      70% {
+        transform: perspective(900px) rotateY(12deg) scale(1.06);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
     }
     @keyframes shine {
-      from { background-position: 200% 0; }
-      to { background-position: -200% 0; }
+      from {
+        background-position: 200% 0;
+      }
+      to {
+        background-position: -200% 0;
+      }
     }
     @media (prefers-reduced-motion: reduce) {
-      .beam, .card, .card::after { animation: none; opacity: 1; }
+      .beam,
+      .card,
+      .card::after {
+        animation: none;
+        opacity: 1;
+      }
     }
   `,
   template: `
     @let s = slide();
     <div
       class="absolute inset-0 -z-10 transition-[background] duration-700"
-      [style.background]="phase() === 'card' ? 'radial-gradient(circle at 50% 45%, ' + tier().light + '55, var(--color-ink) 70%)' : 'var(--color-ink)'"
+      [style.background]="
+        phase() === 'card'
+          ? 'radial-gradient(circle at 50% 45%, ' + tier().light + '55, var(--color-ink) 70%)'
+          : 'var(--color-ink)'
+      "
     ></div>
-    <div class="absolute inset-0 -z-10 overflow-hidden" [style.--beam]="tinted() ? tier().light + 'cc' : 'rgb(255 255 255 / 0.5)'">
+    <div
+      class="absolute inset-0 -z-10 overflow-hidden"
+      [style.--beam]="tinted() ? tier().light + 'cc' : 'rgb(255 255 255 / 0.5)'"
+    >
       <div class="beam left"></div>
       <div class="beam right"></div>
     </div>
 
-    <div class="flex h-full flex-col items-center justify-center px-6 pb-28 pt-24 text-center">
+    <div
+      class="flex h-full flex-col items-center justify-center px-[5vmin] pb-[max(7rem,19vmin)] pt-[max(6rem,14vmin)] text-center"
+    >
       @switch (phase()) {
         @case ('club') {
-          <div class="clue flex flex-col items-center gap-4" [style.--clue]="clueMs()">
-            <app-club-crest [club]="club()" [color]="clubColorOf()" size="clamp(7rem, 32vw, 12rem)" />
-            <p class="eyebrow text-chalk/80">Su club</p>
+          <div class="clue flex flex-col items-center gap-[3vmin]" [style.--clue]="clueMs()">
+            <app-club-crest
+              [club]="club()"
+              [color]="clubColorOf()"
+              size="clamp(7rem, min(32vw, 30vh), 32rem)"
+            />
+            <p class="eyebrow gala-label text-chalk/80">Su club</p>
           </div>
         }
         @case ('stat') {
           <div class="clue flex flex-col items-center gap-2" [style.--clue]="clueMs()">
-            <p class="heading text-[clamp(5rem,26vw,11rem)]">{{ stat().value }}</p>
-            <p class="eyebrow text-chalk/80">{{ stat().label }}</p>
+            <p class="heading gala-number">{{ stat().value }}</p>
+            <p class="eyebrow gala-label text-chalk/80">{{ stat().label }}</p>
           </div>
         }
         @case ('votes') {
           <div class="clue flex flex-col items-center gap-2" [style.--clue]="clueMs()">
-            <p class="heading text-[clamp(5rem,26vw,11rem)]">{{ votes().value }}</p>
-            <p class="eyebrow text-chalk/80">{{ votes().label }}</p>
+            <p class="heading gala-number">{{ votes().value }}</p>
+            <p class="eyebrow gala-label text-chalk/80">{{ votes().label }}</p>
           </div>
         }
         @case ('card') {
-          <app-confetti [colors]="[tier().light, '#fff3c4', '#f2f5ff']" [rain]="s.place === 1" [amount]="s.place === 1 ? 200 : 90" />
-          <div class="card grid grid-rows-[auto_1fr_auto_auto] px-[10%] pb-[16%] pt-[12%] font-display" [class]="tier().card">
-            <div class="flex items-start justify-between text-left">
-              <div>
-                <p class="text-[clamp(2.5rem,12vw,4rem)] font-extrabold leading-[0.85]">{{ s.points }}</p>
-                <p class="text-sm font-bold tracking-widest">PTS</p>
+          <app-confetti
+            [colors]="[tier().light, '#fff3c4', '#f2f5ff']"
+            [rain]="s.place === 1"
+            [amount]="s.place === 1 ? 200 : 90"
+          />
+          <div class="card font-display" [class]="tier().card">
+            <div
+              class="grid size-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto_auto] px-[10cqw] pb-[16cqw] pt-[12cqw]"
+            >
+              <div class="flex items-start justify-between text-left">
+                <div>
+                  <p class="text-[17cqw] font-extrabold leading-[0.85]">{{ s.points }}</p>
+                  <p class="text-[4.5cqw] font-bold tracking-widest">PTS</p>
+                </div>
+                <app-club-crest [club]="club()" [color]="clubColorOf()" size="17cqw" />
               </div>
-              <app-club-crest [club]="club()" [color]="clubColorOf()" size="clamp(2.5rem, 12vw, 4rem)" />
-            </div>
-            <div class="grid aspect-square w-1/2 place-items-center self-center justify-self-center rounded-full bg-[radial-gradient(circle_at_50%_35%,rgb(255_255_255/0.45),rgb(0_0_0/0.12))]">
-              <span class="text-[clamp(2.5rem,13vw,4.5rem)] font-extrabold italic leading-none">{{ initial() }}</span>
-            </div>
-            <p class="truncate border-b border-current pb-1 text-[clamp(1.5rem,8vw,2.5rem)] font-extrabold uppercase italic leading-none">
-              {{ name() }}
-            </p>
-            <div class="grid grid-cols-4 gap-0.5 pt-1.5 text-[0.7rem] font-bold uppercase leading-tight">
-              @for (item of cardStats(); track item.label) {
-                <p>
-                  <span class="block text-[clamp(1rem,5vw,1.5rem)] font-extrabold">{{ item.value }}</span>
-                  {{ item.label }}
-                </p>
-              }
+              <div
+                class="grid aspect-square w-1/2 place-items-center self-center justify-self-center rounded-full bg-[radial-gradient(circle_at_50%_35%,rgb(255_255_255/0.45),rgb(0_0_0/0.12))]"
+              >
+                <span class="text-[22cqw] font-extrabold italic leading-none">{{ initial() }}</span>
+              </div>
+              <p
+                class="truncate border-b-[0.5cqw] border-current pb-[1cqw] text-[12cqw] font-extrabold uppercase italic leading-none"
+              >
+                {{ name() }}
+              </p>
+              <div
+                class="grid grid-cols-4 gap-[1cqw] pt-[2cqw] text-[3.8cqw] font-bold uppercase leading-tight"
+              >
+                @for (item of cardStats(); track item.label) {
+                  <p>
+                    <span class="block text-[8cqw] font-extrabold">{{ item.value }}</span>
+                    {{ item.label }}
+                  </p>
+                }
+              </div>
             </div>
           </div>
-          <p class="eyebrow mt-5 animate-rise [animation-delay:700ms]" [style.color]="tier().light">
+          <p
+            class="eyebrow gala-label mt-[3vmin] animate-rise [animation-delay:700ms]"
+            [style.color]="tier().light"
+          >
             Balón de Oro · {{ placeLabel() }}
           </p>
         }
@@ -197,7 +289,10 @@ export function walkoutMs(place: 1 | 2 | 3): number {
     </div>
 
     @if (flashing()) {
-      <div class="flash pointer-events-none absolute inset-0 z-10" [style.background]="tier().light"></div>
+      <div
+        class="flash pointer-events-none absolute inset-0 z-10"
+        [style.background]="tier().light"
+      ></div>
     }
   `,
 })
@@ -219,7 +314,9 @@ export class Walkout implements OnInit {
     const id = this.slide().participantId;
     return this.session.tournament()?.teams.find((x) => x.memberIds.includes(id))?.club ?? '';
   });
-  protected readonly clubColorOf = computed(() => clubColor(this.session.tournament()?.clubs ?? [], this.club()));
+  protected readonly clubColorOf = computed(() =>
+    clubColor(this.session.tournament()?.clubs ?? [], this.club()),
+  );
   private readonly record = computed(() => {
     const t = this.session.tournament();
     return t ? playerRecord(t, this.slide().participantId) : { played: 0, wins: 0, goals: 0 };
@@ -229,7 +326,10 @@ export class Walkout implements OnInit {
   /** Second clue: goals when they are tracked, wins otherwise. */
   protected readonly stat = computed(() =>
     this.trackScorers()
-      ? { value: this.record().goals, label: this.record().goals === 1 ? 'gol en la noche' : 'goles en la noche' }
+      ? {
+          value: this.record().goals,
+          label: this.record().goals === 1 ? 'gol en la noche' : 'goles en la noche',
+        }
       : { value: this.record().wins, label: this.record().wins === 1 ? 'victoria' : 'victorias' },
   );
   /** Third clue: first-place votes, or how many podiums they made if nobody put them first. */
@@ -242,7 +342,9 @@ export class Walkout implements OnInit {
   protected readonly cardStats = computed(() => {
     const r = this.record();
     return [
-      this.trackScorers() ? { label: 'Gol', value: `${r.goals}` } : { label: 'Votos', value: `${this.slide().ballots}` },
+      this.trackScorers()
+        ? { label: 'Gol', value: `${r.goals}` }
+        : { label: 'Votos', value: `${this.slide().ballots}` },
       { label: 'PJ', value: `${r.played}` },
       { label: 'Vic', value: `${r.wins}` },
       { label: 'BdO', value: `${this.slide().place}º` },

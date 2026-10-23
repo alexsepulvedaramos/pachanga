@@ -185,7 +185,8 @@ export function pendingDecision(
   if (pool.length === 4 && byPhase(matches, 'playoff').length === 0) {
     const [chooser, orderChooser] = pool;
     if (!choices.playoffOpponentId) {
-      return { kind: 'playoffOpponent', chooserId: chooser, options: pool.slice(1) };
+      // The 4th can't be picked, like the 2nd in the semis: being better ranked is the privilege.
+      return { kind: 'playoffOpponent', chooserId: chooser, options: pool.slice(2) };
     }
     if (choices.playoffChooserFirst === undefined) {
       return { kind: 'playoffOrder', chooserId: orderChooser };
@@ -196,7 +197,8 @@ export function pendingDecision(
   if (semis && byPhase(matches, 'semi').length === 0) {
     const [chooser, orderChooser] = semis;
     if (!choices.semiOpponentId) {
-      return { kind: 'semiOpponent', chooserId: chooser, options: semis.slice(1) };
+      // The 2nd can't be picked: being 2nd is what keeps the group winner away from them.
+      return { kind: 'semiOpponent', chooserId: chooser, options: semis.slice(2) };
     }
     if (choices.semiChooserFirst === undefined) {
       return { kind: 'semiOrder', chooserId: orderChooser };

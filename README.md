@@ -26,8 +26,8 @@ their own phones or on the TV.
 - **Live standings** with tiebreakers chosen and ordered when the tournament is set up
   (goal difference, goals for, head-to-head, wins, drawing of lots…).
 - **Playoff and bracket as the house rules want them.** With 5–7 pairs, top two go straight to
-  the semis, 3rd–6th play a playoff where the 3rd picks their opponent and the 4th picks the order; the group winner
-  picks their semi-final opponent. Extra time and penalties in knockout matches.
+  the semis, 3rd–6th play a playoff where the 3rd picks their opponent (the 5th or the 6th, never the 4th) and the 4th picks the order; the group winner
+  picks their semi-final opponent (never the 2nd). Extra time and penalties in knockout matches.
 - **Solo player support.** Before each of their matches the solo player gets a partner drawn from
   whoever isn't playing; for the knockout stage they draw a fixed partner from eliminated players.
   Injuries mid-tournament turn the partner into a solo player automatically.
@@ -46,6 +46,9 @@ their own phones or on the TV.
   never themselves) from their phone. Ballots stay secret in their own table; the vote closes when
   everybody has voted or the admin closes it. A ballot is cast by the phone holding that name, and
   the admin can delete one.
+- **Format and rules.** Once the tournament is on, an info button in the header opens a sheet that
+  explains in plain words the format that was set up: matches, minutes per half, tiebreakers, who
+  chooses what in the knockout, solo players, injuries and the Ballon d'Or.
 - **Moment to choose.** When a team has to pick its knockout rival (or whether its match goes
   first), every screen shows it full screen: the TV and the other phones wait with that team while
   its players choose from their own phones (the admin can choose for them), then every screen
@@ -143,7 +146,8 @@ Where the rulebook leaves room for interpretation, the app does this:
   their team got, then the drawing of lots.
 - **Solo player in the playoff:** nobody is eliminated yet, so they get a drawn stand-in per match,
   as in the group stage. The fixed partner from the eliminated players is drawn for the semis.
-- **Group winner's pick:** the 1st can choose any of the other semi-finalists, the 2nd included.
+- **Choices skip the runner-up:** the group winner can't pick the 2nd as semi-final opponent, and the 3rd can't pick
+  the 4th in the playoff: the better-ranked of the two gets the remaining tie, which is the privilege of ranking higher.
 - **A withdrawal while someone already plays solo:** both play as solo players with drawn
   stand-ins rather than merging into one team.
 - **Suspended player:** their partner plays the match alone; a solo player who is suspended is

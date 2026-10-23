@@ -153,11 +153,26 @@ describe('standings', () => {
 describe('knockout', () => {
   const ranking = ['s1', 's2', 's3', 's4', 's5', 's6'];
 
+  it('does not let the group winner pick the 2nd as their semi-final opponent', () => {
+    const matches = ['po1', 'po2'].map((id, i) => ({
+      id,
+      phase: 'playoff' as const,
+      homeId: i ? 's4' : 's3',
+      awayId: i ? 's5' : 's6',
+      status: 'done' as const,
+      homeGoals: 1,
+      awayGoals: 0,
+    }));
+    const decision = pendingDecision(ranking, { playoffOpponentId: 's6', playoffChooserFirst: true }, matches);
+    expect(decision).toEqual({ kind: 'semiOpponent', chooserId: 's1', options: ['s3', 's4'] });
+  });
+
   it('lets the 3rd pick the playoff opponent and the 4th pick the order', () => {
     expect(pendingDecision(ranking, {}, [])).toEqual({
       kind: 'playoffOpponent',
       chooserId: 's3',
-      options: ['s4', 's5', 's6'],
+      // The 4th can't be picked: it plays whoever is left.
+      options: ['s5', 's6'],
     });
     expect(pendingDecision(ranking, { playoffOpponentId: 's6' }, [])).toEqual({
       kind: 'playoffOrder',
