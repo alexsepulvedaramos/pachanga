@@ -39,7 +39,13 @@ const MIN_CODE = 4;
         <ul class="mt-4 space-y-3">
           @for (p of people(); track p.id) {
             <li class="bg-ink/40 p-3">
-              <p class="font-medium">{{ p.name }}</p>
+              <div class="flex items-center justify-between gap-3">
+                <p class="font-medium">{{ p.name }}</p>
+                <label class="flex items-center gap-2 text-xs text-mist">
+                  <input type="checkbox" [checked]="noSolo().includes(p.id)" (change)="toggleSolo(p.id)" />
+                  No solo
+                </label>
+              </div>
               <div class="mt-2 flex flex-wrap items-center gap-1.5">
                 @for (other of apartFrom(p.id); track other) {
                   <button
@@ -86,8 +92,15 @@ export class ApartPanel {
   );
   protected readonly possible = computed(() => {
     const t = this.session.tournament();
-    return !t || drawIsPossible(t, this.session.apart());
+    return !t || drawIsPossible(t, this.session.drawRules());
   });
+
+  protected readonly noSolo = this.session.noSolo;
+
+  protected toggleSolo(id: string): void {
+    const now = this.session.noSolo();
+    this.session.setNoSolo(now.includes(id) ? now.filter((x) => x !== id) : [...now, id]);
+  }
 
   protected apartFrom(id: string): string[] {
     return apartFrom(this.session.apart(), id);

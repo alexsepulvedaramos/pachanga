@@ -3,6 +3,14 @@ import { DrawState, Id, Tournament } from './types';
 /** People who must not end up on the same team in the wheel, by participant (kept symmetric). */
 export type Apart = Record<Id, Id[]>;
 
+/** What the admin wants from the wheel: who can't share a team, and who can't be left playing alone. */
+export interface DrawRules {
+  apart: Apart;
+  noSolo: Id[];
+}
+
+export const NO_RULES: DrawRules = { apart: {}, noSolo: [] };
+
 export function keepsApart(apart: Apart, a: Id, b: Id): boolean {
   return !!apart[a]?.includes(b) || !!apart[b]?.includes(a);
 }
@@ -26,14 +34,15 @@ export function toggleApart(apart: Apart, a: Id, b: Id): Apart {
 }
 
 /** Whether everybody without a club yet can still be placed without breaking a restriction. */
-function completable(t: Tournament, apart: Apart, picks: DrawState['picks']): boolean {
+function completable(t: Tournament, rules: DrawRules, picks: DrawState['picks']): boolean {
+  const { apart, noSolo } = rules;
   const members = new Map<string, Id[]>(t.clubs.map((club) => [club, []]));
   for (const { participantId, club } of picks) members.get(club)!.push(participantId);
   const assigned = new Set(picks.map((p) => p.participantId));
   const todo = t.participants.filter((p) => !assigned.has(p.id)).map((p) => p.id);
 
   const place = (i: number): boolean => {
-    if (i === todo.length) return true;
+    if (i === todo.length) return ![...members.values()].some((ids) => ids.length === 1 && noSolo.includes(ids[0]));
     let triedEmpty = false;
     for (const ids of members.values()) {
       if (ids.length >= 2) continue;
@@ -57,18 +66,18 @@ function completable(t: Tournament, apart: Apart, picks: DrawState['picks']): bo
  * Clubs `participantId` can be drawn into: the partner already there is fine with them and the
  * rest of the players can still be placed afterwards. Empty when the restrictions can't be met.
  */
-export function allowedClubs(t: Tournament, participantId: Id, apart: Apart): Set<string> {
+export function allowedClubs(t: Tournament, participantId: Id, rules: DrawRules): Set<string> {
   const allowed = new Set<string>();
   for (const club of new Set(t.clubs)) {
     const taken = t.draw.picks.filter((p) => p.club === club);
     if (taken.length >= 2) continue;
-    if (taken.some((p) => keepsApart(apart, participantId, p.participantId))) continue;
-    if (completable(t, apart, [...t.draw.picks, { participantId, club }])) allowed.add(club);
+    if (taken.some((p) => keepsApart(rules.apart, participantId, p.participantId))) continue;
+    if (completable(t, rules, [...t.draw.picks, { participantId, club }])) allowed.add(club);
   }
   return allowed;
 }
 
 /** Whether the draw, as it stands now, can still be finished without breaking a restriction. */
-export function drawIsPossible(t: Tournament, apart: Apart): boolean {
-  return completable(t, apart, t.draw.picks);
+export function drawIsPossible(t: Tournament, rules: DrawRules): boolean {
+  return completable(t, rules, t.draw.picks);
 }
