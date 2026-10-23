@@ -168,6 +168,30 @@
   text-transform: uppercase;
 }
 
+/*
+ * Gala type. Sized against the screen's short side (vmin), so a phone keeps what it had and a TV or
+ * a laptop gets text it can read from the sofa; the vw terms keep long names inside a narrow phone.
+ */
+@utility gala-label {
+  font-size: max(0.875rem, 3.4vmin);
+  letter-spacing: 0.16em;
+}
+@utility gala-title {
+  font-size: clamp(3rem, min(14vw, 19vmin), 26rem);
+}
+@utility gala-title-xl {
+  font-size: clamp(3.5rem, min(16vw, 18vmin), 30rem);
+}
+@utility gala-subtitle {
+  font-size: clamp(1.5rem, min(6vw, 8vmin), 10rem);
+}
+@utility gala-number {
+  font-size: clamp(5rem, min(26vw, 26vmin), 36rem);
+}
+@utility gala-text {
+  font-size: max(1rem, 3vmin);
+}
+
 /* TV mode sizes everything to the screen: ~17px on a 1080p TV, never under 12px on a tablet. */
 html.tv-screen {
   font-size: clamp(12px, min(0.9vw, 1.6vh), 22px);
