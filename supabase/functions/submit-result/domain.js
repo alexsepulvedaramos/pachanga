@@ -598,7 +598,6 @@ function sync(t) {
   for (; ; ) {
     const created = nextKnockoutMatches(next.groupRanking, next.knockout, next.matches);
     if (created.length === 0) break;
-    if (created[0].phase === "semi") next = drawKnockoutPartners(next);
     next = { ...next, matches: [...next.matches, ...created] };
   }
   const final = next.matches.find((m) => m.phase === "final");
@@ -606,22 +605,6 @@ function sync(t) {
   const thirdDone = third ? !!winnerOf(third) : !knockoutFormat(next.teams.length).thirdPlace;
   if (final && winnerOf(final) && thirdDone) next = { ...next, stage: "finished" };
   return next;
-}
-function drawKnockoutPartners(t) {
-  const semis = semiFinalists(t.groupRanking, t.matches) ?? [];
-  const eliminatedTeams = t.teams.filter((x) => !semis.includes(x.id));
-  const pool = eliminatedTeams.flatMap((x) => activeMembers(t, x.id));
-  const rng = seededRng(t.config.seed ^ 24301);
-  const taken = /* @__PURE__ */ new Set();
-  const teams = t.teams.map((x) => {
-    if (!semis.includes(x.id) || !isSolo(t, x.id) || x.knockoutPartnerId) return x;
-    const free = pool.filter((id) => !taken.has(id));
-    if (free.length === 0) return x;
-    const partnerId = pick(free, rng);
-    taken.add(partnerId);
-    return { ...x, knockoutPartnerId: partnerId };
-  });
-  return { ...t, teams };
 }
 export {
   playerMakeChoice,

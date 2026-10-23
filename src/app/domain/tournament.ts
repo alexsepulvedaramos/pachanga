@@ -10,7 +10,7 @@ import {
   Tournament,
   TournamentConfig,
 } from './types';
-import { Rng, pick, seededRng, shuffle } from './rng';
+import { Rng, pick, shuffle } from './rng';
 import { buildGroupSchedule } from './schedule';
 import { computeStandings, DEFAULT_TIEBREAKERS, StandingRow } from './standings';
 import {
@@ -22,7 +22,6 @@ import {
   MIN_TEAMS,
   nextKnockoutMatches,
   pendingDecision,
-  semiFinalists,
   teamAlive,
   winnerOf,
 } from './knockout';
@@ -311,6 +310,7 @@ export function startMatch(t: Tournament, matchId: Id, rng: Rng): Tournament {
 
 function needsStandIn(t: Tournament, m: Match, teamId: Id): boolean {
   if (!isSolo(t, teamId)) return false;
+  // Tournaments started before the stand-in was drawn in every match kept a fixed partner.
   const hasKnockoutPartner = !!team(t, teamId).knockoutPartnerId;
   return !(hasKnockoutPartner && (m.phase === 'semi' || m.phase === 'third' || m.phase === 'final'));
 }
@@ -645,7 +645,7 @@ export function playerMakeChoice(t: Tournament, participantId: Id, choice: Parti
 
 /**
  * Moves the tournament forward after any change: closes the group stage, creates the knockout
- * matches that are ready and draws the fixed knockout partner of a solo team.
+ * matches that are ready.
  */
 export function sync(t: Tournament): Tournament {
   let next = t;
@@ -658,7 +658,6 @@ export function sync(t: Tournament): Tournament {
   for (;;) {
     const created = nextKnockoutMatches(next.groupRanking!, next.knockout, next.matches);
     if (created.length === 0) break;
-    if (created[0].phase === 'semi') next = drawKnockoutPartners(next);
     next = { ...next, matches: [...next.matches, ...created] };
   }
 
@@ -669,29 +668,12 @@ export function sync(t: Tournament): Tournament {
   return next;
 }
 
-/** Solo teams that reach the semi-finals draw a fixed partner among eliminated players. */
-function drawKnockoutPartners(t: Tournament): Tournament {
-  const semis = semiFinalists(t.groupRanking!, t.matches) ?? [];
-  const eliminatedTeams = t.teams.filter((x) => !semis.includes(x.id));
-  const pool = eliminatedTeams.flatMap((x) => activeMembers(t, x.id));
-  const rng = seededRng(t.config.seed ^ 0x5eed);
-  const taken = new Set<Id>();
-  const teams = t.teams.map((x) => {
-    if (!semis.includes(x.id) || !isSolo(t, x.id) || x.knockoutPartnerId) return x;
-    const free = pool.filter((id) => !taken.has(id));
-    if (free.length === 0) return x;
-    const partnerId = pick(free, rng);
-    taken.add(partnerId);
-    return { ...x, knockoutPartnerId: partnerId };
-  });
-  return { ...t, teams };
-}
-
+/** The members of the team that won the final: a stand-in who played it is not a champion. */
 export function champions(t: Tournament): Id[] | null {
   const final = t.matches.find((m) => m.phase === 'final');
   const winner = final && winnerOf(final);
   if (!final || !winner) return null;
-  return lineup(t, final, winner);
+  return lineup(t, final, winner).filter((id) => team(t, winner).memberIds.includes(id));
 }
 
 // ---------------------------------------------------------------------------------------------

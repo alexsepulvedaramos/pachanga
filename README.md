@@ -29,9 +29,9 @@ their own phones or on the TV.
   the semis, 3rd–6th play a playoff where the 3rd picks their opponent (the 5th or the 6th, never the 4th) and the 5th picks which tie goes first; the group winner
   picks their semi-final opponent (never the 2nd) and the 3rd semi-finalist picks which semi goes first. Extra time and penalties in knockout matches.
 - **Solo player support.** Before each of their matches the solo player gets a partner drawn from
-  whoever isn't playing, favouring those with the least riding on the match (see below); for the
-  knockout stage they draw a fixed partner from eliminated players. Injuries mid-tournament turn
-  the partner into a solo player automatically.
+  whoever isn't playing, favouring those with the least riding on the match (see below), final
+  included: nobody plays extra matches as a fixed partner, and a stand-in who plays the final is
+  not a champion. Injuries mid-tournament turn the partner into a solo player automatically.
 - **Red cards and injuries** of in-game footballers, picked from the club's real squad: they are
   shown as unavailable in that club's next match (the final is exempt) and in the push notification.
 - **Balanced club picker.** Pick a target rating and get clubs from the big five leagues as close
@@ -145,8 +145,12 @@ Where the rulebook leaves room for interpretation, the app does this:
 
 - **Ballon d'Or ties:** more first places, then more second places, then more goals, then how far
   their team got, then the drawing of lots.
-- **Solo player in the playoff:** nobody is eliminated yet, so they get a drawn stand-in per match,
-  as in the group stage. The fixed partner from the eliminated players is drawn for the semis.
+- **Solo player in the knockout:** a stand-in is drawn for every match, as in the group stage,
+  rather than one fixed partner from the eliminated players: that partner would play extra
+  matches and could be champion after losing. Tournaments already under way keep the fixed
+  partner they were given.
+- **Champions:** only the members of the winning team, so a stand-in who played the final is not
+  listed as champion.
 - **Who can be a stand-in:** a stand-in's own team could gain from the match going one way, so the
   draw looks at the stake of each free player's team and only then at fairness and tiredness.
   Each criterion only separates those tied on the previous one, and the draw never fails while

@@ -100,7 +100,7 @@ export function formatGuide(t: Tournament): GuideSection[] {
       items: [
         ...(solo
           ? [
-              'Al ser impares, uno juega solo: antes de cada partido de liguilla se le sortea compañero entre quienes no juegan, y en las eliminatorias tiene un compañero fijo sorteado entre los eliminados.',
+              'Al ser impares, uno juega solo: antes de cada partido, final incluida, se le sortea compañero entre quienes no juegan. El invitado juega pero no cuenta como campeón.',
               'Ese invitado sale del sorteo con prioridad para quien menos se juega: primero los que ya no pueden cambiar su puesto con el resultado, luego los que están lejos en la tabla, y después los que menos veces han sido invitados, no acaban de jugar ni juegan justo después. Si el admin repite el sorteo, no vuelve a salir el descartado y queda anotado en el partido.',
             ]
           : []),
