@@ -42,6 +42,7 @@ their own phones or on the TV.
   holding their name; a Supabase Edge Function checks that phone's token and
   applies it with the app's own rules (bundled like the notifications). The match then shows who
   entered it, and the admin can still correct it.
+- **Editable names.** The admin can fix a typo or give someone a nickname at any point, from the pencil in the header; everything else refers to people by id, so nothing is lost.
 - **Optional goal scorers** and a top scorers table.
 - **Ballon d'Or** (optional): when the final ends every player votes a podium (3, 2 and 1 points,
   never themselves) from their phone. Ballots stay secret in their own table; the vote closes when

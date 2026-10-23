@@ -22,6 +22,7 @@ import {
   isSolo,
   moveMember,
   renameClub,
+  renameParticipant,
   reportResult,
   playerStartMatch,
   swapMembers,
@@ -541,6 +542,17 @@ describe('editing pairs', () => {
     expect(next.clubs).toContain('Napoli');
     expect(next.clubs).not.toContain(t.teams[0].club);
     expect(() => renameClub(next, t.teams[1].id, 'napoli')).toThrow(TournamentError);
+  });
+
+  it('renames a player, trimming spaces, and keeps names unique', () => {
+    const t = ready(12);
+    const [first, second] = t.participants;
+    const next = renameParticipant(t, first.id, '  El   Gato ');
+    expect(next.participants[0].name).toBe('El Gato');
+    expect(next.teams).toEqual(t.teams);
+    expect(renameParticipant(next, first.id, 'el gato').participants[0].name).toBe('el gato');
+    expect(() => renameParticipant(next, second.id, 'el gato')).toThrow(TournamentError);
+    expect(() => renameParticipant(next, second.id, '   ')).toThrow(TournamentError);
   });
 
   it('waits for the live match to finish', () => {
