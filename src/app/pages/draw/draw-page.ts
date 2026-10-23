@@ -28,7 +28,7 @@ import {
 } from '../../domain/tournament';
 
 const SECRET_TAPS = 7;
-const SECRET_TAP_MS = 600;
+const SECRET_TAP_MS = 800;
 
 interface Reveal {
   name: string;
@@ -173,7 +173,14 @@ interface Reveal {
             }
 
             <div>
-              <h2 class="eyebrow text-cyan" (click)="secretTap()">Parejas</h2>
+              <h2
+                class="eyebrow select-none touch-manipulation text-cyan"
+                style="-webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none"
+                (click)="secretTap()"
+                (contextmenu)="$event.preventDefault()"
+              >
+                Parejas
+              </h2>
               <ul class="mt-2 space-y-1.5">
                 @for (pair of pairs(); track pair.club) {
                   <li class="cut-sm flex items-center gap-3 bg-pitch py-2 pl-0 pr-3">
