@@ -333,7 +333,7 @@ function drawStandIn(t: Tournament, m: Match, teamId: Id, rng: Rng): Id {
     ...lineup(t, m, m.awayId),
     ...Object.values(m.standIns ?? {}),
   ]);
-  const free = t.participants.filter((p) => !p.disqualified && !busy.has(p.id));
+  const free = t.participants.filter((p) => !p.disqualified && !p.noStandIn && !busy.has(p.id));
   if (free.length === 0) throw new TournamentError('No hay nadie libre para hacer pareja.');
   const discarded = new Set(m.redrawn?.[teamId] ?? []);
   const candidates = free.filter((p) => !discarded.has(p.id));
@@ -497,6 +497,20 @@ export function reopenMatch(t: Tournament, matchId: Id): Tournament {
 export function disqualify(t: Tournament, participantId: Id): Tournament {
   const p = participant(t, participantId);
   const participants = t.participants.map((x) => (x.id === p.id ? { ...x, disqualified: true } : x));
+  return { ...t, participants };
+}
+
+/**
+ * Lets the admin keep someone out of (or put them back into) the stand-in draw. It only takes
+ * effect on the draws from then on: whoever is already drawn for a match stays until it's redrawn.
+ */
+export function setStandInAvailable(t: Tournament, participantId: Id, available: boolean): Tournament {
+  const p = participant(t, participantId);
+  const participants = t.participants.map((x) => {
+    if (x.id !== p.id) return x;
+    const { noStandIn: _, ...rest } = x;
+    return available ? rest : { ...rest, noStandIn: true };
+  });
   return { ...t, participants };
 }
 

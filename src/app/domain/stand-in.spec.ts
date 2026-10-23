@@ -13,8 +13,10 @@ import {
   nextMatch,
   recordResult,
   redrawStandIn,
+  setStandInAvailable,
   spin,
   startMatch,
+  TournamentError,
 } from './tournament';
 
 const CLUBS = ['Real Madrid', 'Man City', 'Bayern', 'PSG', 'Inter', 'Liverpool', 'Barça', 'Arsenal'];
@@ -154,6 +156,32 @@ describe('drawing the stand-in', () => {
         t = recordResult(t, m.id, { homeGoals: seed % 3, awayGoals: (seed + 1) % 3 });
       }
       expect(checked).toBeGreaterThan(0);
+    }
+  });
+
+  it('never draws someone the admin kept out, and draws them again once they are back', () => {
+    for (let seed = 1; seed <= 12; seed++) {
+      const rng = seededRng(seed);
+      const base = drawn(11, seed, rng);
+      const solo = base.teams.find((x) => isSolo(base, x.id))!;
+      const m = base.matches.find((x) => [x.homeId, x.awayId].includes(solo.id))!;
+      const busy = new Set([...lineup(base, m, m.homeId), ...lineup(base, m, m.awayId)]);
+      const free = base.participants.filter((p) => !busy.has(p.id));
+      // Everyone but one is out: the draw has to take the one left.
+      let t = base;
+      for (const p of free.slice(1)) t = setStandInAvailable(t, p.id, false);
+      for (let i = 0; i < 3; i++) {
+        t = startMatch(t, m.id, rng);
+        expect(t.matches.find((x) => x.id === m.id)!.standIns![solo.id]).toBe(free[0].id);
+        t = { ...t, matches: t.matches.map((x) => (x.id === m.id ? { ...x, status: 'pending', standIns: undefined } : x)) };
+      }
+      // Nobody left at all.
+      t = setStandInAvailable(t, free[0].id, false);
+      expect(() => startMatch(t, m.id, rng)).toThrow(TournamentError);
+      // Back in.
+      t = setStandInAvailable(t, free[0].id, true);
+      expect(t.participants.find((p) => p.id === free[0].id)).not.toHaveProperty('noStandIn');
+      expect(() => startMatch(t, m.id, rng)).not.toThrow();
     }
   });
 

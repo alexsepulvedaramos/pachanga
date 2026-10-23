@@ -4,6 +4,8 @@ export interface Participant {
   id: Id;
   name: string;
   disqualified?: boolean;
+  /** Kept out of the stand-in draw by the admin (tired, not fit to play); still plays for their own team. */
+  noStandIn?: boolean;
 }
 
 export interface Team {

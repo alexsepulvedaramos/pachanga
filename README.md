@@ -165,6 +165,10 @@ Where the rulebook leaves room for interpretation, the app does this:
     the other half of the bracket is far.
   - *Redraws:* the admin's "another stand-in" never brings back someone already discarded for that
     match (unless nobody else is free) and the match card shows who was discarded.
+  - *Kept out by the admin:* a list on the matches page (only with a solo player) lets the admin
+    take someone out of the stand-in draw, for instance if they're not fit to play, and put them
+    back. They still play for their own team. It applies to the draws that follow, and also to
+    matches started from a phone.
 - **One privilege each in the playoff and the semis:** the best-ranked picks the rival, the second can't be picked
   (it plays whoever is left), the third sets which tie goes first and the fourth gets nothing.
 - **A withdrawal while someone already plays solo:** both play as solo players with drawn

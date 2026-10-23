@@ -422,7 +422,7 @@ function drawStandIn(t, m, teamId, rng) {
     ...lineup(t, m, m.awayId),
     ...Object.values(m.standIns ?? {})
   ]);
-  const free = t.participants.filter((p) => !p.disqualified && !busy.has(p.id));
+  const free = t.participants.filter((p) => !p.disqualified && !p.noStandIn && !busy.has(p.id));
   if (free.length === 0) throw new TournamentError("No hay nadie libre para hacer pareja.");
   const discarded = new Set(m.redrawn?.[teamId] ?? []);
   const candidates = free.filter((p) => !discarded.has(p.id));
