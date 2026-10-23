@@ -185,7 +185,8 @@ export function pendingDecision(
   if (pool.length === 4 && byPhase(matches, 'playoff').length === 0) {
     const [chooser, orderChooser] = pool;
     if (!choices.playoffOpponentId) {
-      return { kind: 'playoffOpponent', chooserId: chooser, options: pool.slice(1) };
+      // The 4th can't be picked, like the 2nd in the semis: being better ranked is the privilege.
+      return { kind: 'playoffOpponent', chooserId: chooser, options: pool.slice(2) };
     }
     if (choices.playoffChooserFirst === undefined) {
       return { kind: 'playoffOrder', chooserId: orderChooser };

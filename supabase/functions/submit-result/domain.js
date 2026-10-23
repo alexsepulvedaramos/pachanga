@@ -222,7 +222,7 @@ function pendingDecision(ranking, choices, matches) {
   if (pool.length === 4 && byPhase(matches, "playoff").length === 0) {
     const [chooser, orderChooser] = pool;
     if (!choices.playoffOpponentId) {
-      return { kind: "playoffOpponent", chooserId: chooser, options: pool.slice(1) };
+      return { kind: "playoffOpponent", chooserId: chooser, options: pool.slice(2) };
     }
     if (choices.playoffChooserFirst === void 0) {
       return { kind: "playoffOrder", chooserId: orderChooser };

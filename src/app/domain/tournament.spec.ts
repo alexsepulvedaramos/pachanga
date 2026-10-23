@@ -171,7 +171,8 @@ describe('knockout', () => {
     expect(pendingDecision(ranking, {}, [])).toEqual({
       kind: 'playoffOpponent',
       chooserId: 's3',
-      options: ['s4', 's5', 's6'],
+      // The 4th can't be picked: it plays whoever is left.
+      options: ['s5', 's6'],
     });
     expect(pendingDecision(ranking, { playoffOpponentId: 's6' }, [])).toEqual({
       kind: 'playoffOrder',

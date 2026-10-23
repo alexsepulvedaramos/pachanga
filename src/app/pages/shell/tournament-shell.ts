@@ -8,6 +8,8 @@ import { ShareButtons } from '../../ui/share-buttons';
 import { invitationText, tournamentUrl } from '../../domain/share-text';
 import { DEMO_PREFIX } from '../../data/tournament-repository';
 import { Gala } from '../gala/gala';
+import { Icon } from '../../ui/icon';
+import { FormatInfo } from './format-info';
 import { GalaViewer } from '../gala/gala-viewer';
 import { LeagueRecap } from '../league/league-recap';
 import { LeagueRecapViewer } from '../league/league-recap-viewer';
@@ -27,7 +29,7 @@ const ICONS = {
 
 @Component({
   selector: 'app-tournament-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Brand, StageBadge, ShareButtons, Gala, LeagueRecap, ChoiceMoment, IdentityGate],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Brand, StageBadge, ShareButtons, Gala, LeagueRecap, ChoiceMoment, IdentityGate, FormatInfo, Icon],
   providers: [TournamentSession, GalaViewer, LeagueRecapViewer, ChoiceMomentViewer],
   template: `
     @if (session.loading()) {
@@ -57,6 +59,16 @@ const ICONS = {
             class="tag hidden bg-line text-mist hover:text-chalk sm:inline-block"
             >Modo TV</a
           >
+          @if (t.stage !== 'setup') {
+            <button
+              type="button"
+              class="grid size-10 shrink-0 place-items-center bg-line text-mist hover:text-chalk sm:size-auto sm:px-3 sm:py-1"
+              aria-label="Formato y reglas"
+              (click)="info.set(true)"
+            >
+              <app-icon name="info" size="1.25rem" />
+            </button>
+          }
           <button
             type="button"
             class="grid size-10 shrink-0 place-items-center bg-line text-chalk hover:bg-raised sm:size-auto sm:px-3 sm:py-1"
@@ -159,6 +171,10 @@ const ICONS = {
         <router-outlet />
       </main>
 
+      @if (info()) {
+        <app-format-info (closed)="info.set(false)" />
+      }
+
       @if (gala.mode()) {
         <app-gala />
       } @else if (leagueRecap.open()) {
@@ -180,6 +196,7 @@ export class TournamentShell {
 
   protected readonly unlocking = signal(false);
   protected readonly sharing = signal(false);
+  protected readonly info = signal(false);
   /** Demos live in this browser only: a link to one opens nothing elsewhere. */
   protected readonly isDemo = computed(() => !!this.session.tournament()?.id.startsWith(DEMO_PREFIX));
   protected readonly link = computed(() => {
