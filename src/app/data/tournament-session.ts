@@ -9,6 +9,7 @@ import {
   TournamentRepository,
   WrongPinError,
 } from './tournament-repository';
+import { Apart } from '../domain/apart';
 import { validateVote } from '../domain/ballon-dor';
 import { MatchResult, playerMakeChoice, playerStartMatch, reportResult } from '../domain/tournament';
 import { ToastService } from '../ui/toast.service';
@@ -40,6 +41,8 @@ export class TournamentSession {
   readonly needsIdentity = computed(() => !!this.tournament() && !this.me() && !this.guest());
   /** Names some phone holds. */
   readonly claimed = computed(() => new Set(this.tournament()?.claimed ?? []));
+  /** Players the admin keeps off the same team in the wheel: private to this device. */
+  readonly apart = signal<Apart>({});
 
   readonly teams = computed(() => new Map((this.tournament()?.teams ?? []).map((t) => [t.id, t])));
   readonly people = computed(
@@ -86,6 +89,7 @@ export class TournamentSession {
       this.version = stored.version;
       this.tournament.set(stored.tournament);
       this.pin.set(this.store.savedPin(id));
+      this.apart.set(this.store.savedApart(id));
       this.guest.set(this.store.isGuest(id));
       const me = this.store.savedIdentity(id);
       this.me.set(me && stored.tournament.participants.some((p) => p.id === me) ? me : null);
@@ -115,6 +119,13 @@ export class TournamentSession {
       this.pin.set(pin);
     }
     return ok;
+  }
+
+  setApart(apart: Apart): void {
+    const t = this.tournament();
+    if (!t) return;
+    this.store.rememberApart(t.id, apart);
+    this.apart.set(apart);
   }
 
   private setMe(participantId: Id | null): void {

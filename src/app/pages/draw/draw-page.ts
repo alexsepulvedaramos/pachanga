@@ -2,6 +2,7 @@ import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { TournamentSession } from '../../data/tournament-session';
 import { Wheel } from '../../ui/wheel';
+import { ApartPanel } from '../../ui/apart-panel';
 import { ShareButtons } from '../../ui/share-buttons';
 import { invitationText, tournamentUrl } from '../../domain/share-text';
 import { ConfirmService } from '../../ui/confirm.service';
@@ -26,6 +27,9 @@ import {
   wheelEntries,
 } from '../../domain/tournament';
 
+const SECRET_TAPS = 7;
+const SECRET_TAP_MS = 600;
+
 interface Reveal {
   name: string;
   club: string;
@@ -34,7 +38,7 @@ interface Reveal {
 
 @Component({
   selector: 'app-draw-page',
-  imports: [Wheel, ShareButtons, ClubCrest],
+  imports: [Wheel, ShareButtons, ClubCrest, ApartPanel],
   template: `
     @if (session.tournament(); as t) {
       @if (t.stage === 'draw') {
@@ -169,7 +173,7 @@ interface Reveal {
             }
 
             <div>
-              <h2 class="eyebrow text-cyan">Parejas</h2>
+              <h2 class="eyebrow text-cyan" (click)="secretTap()">Parejas</h2>
               <ul class="mt-2 space-y-1.5">
                 @for (pair of pairs(); track pair.club) {
                   <li class="cut-sm flex items-center gap-3 bg-pitch py-2 pl-0 pr-3">
@@ -189,6 +193,9 @@ interface Reveal {
             </div>
           </aside>
         </div>
+        @if (apartOpen()) {
+          <app-apart-panel (closed)="apartOpen.set(false)" />
+        }
       } @else {
         <h1 class="heading text-4xl">Parejas</h1>
         <ul class="mt-6 grid items-start gap-3 sm:grid-cols-2">
@@ -298,6 +305,10 @@ export class DrawPage {
   /** Team whose withdrawal options are open. */
   protected readonly menuFor = signal<string | null>(null);
   protected readonly mode = signal<'wheel' | 'manual'>('wheel');
+  /** Hidden admin panel to keep players off the same team; opened by tapping "Parejas" seven times. */
+  protected readonly apartOpen = signal(false);
+  private secretTaps = 0;
+  private lastTap = 0;
 
   protected readonly manualRows = computed(() => {
     const t = this.session.tournament();
@@ -346,10 +357,21 @@ export class DrawPage {
     return clubColor(t.clubs, club);
   }
 
+  protected secretTap(): void {
+    if (!this.session.isAdmin()) return;
+    const now = Date.now();
+    this.secretTaps = now - this.lastTap < SECRET_TAP_MS ? this.secretTaps + 1 : 1;
+    this.lastTap = now;
+    if (this.secretTaps >= SECRET_TAPS) {
+      this.secretTaps = 0;
+      this.apartOpen.set(true);
+    }
+  }
+
   protected spinWheel(): void {
     const t = this.session.tournament();
     if (!t || this.busy()) return;
-    const result = spin(t, Math.random);
+    const result = spin(t, Math.random, this.session.apart());
     this.pending = result.tournament;
     this.busy.set(true);
     this.reveal.set(null);
