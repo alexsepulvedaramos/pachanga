@@ -39,7 +39,7 @@ const ZONE_COLOR: Record<LeagueZone, string> = { direct: 'bg-volt', playoff: 'bg
         <div class="absolute inset-x-0 top-0 z-20 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <div class="flex gap-1">
             @for (s of slides; track s) {
-              <div class="h-1 flex-1 overflow-hidden bg-chalk/25">
+              <div class="h-[max(0.25rem,0.5vmin)] flex-1 overflow-hidden bg-chalk/25">
                 @if ($index < index() || ($index === index() && finished())) {
                   <div class="h-full bg-chalk"></div>
                 } @else if ($index === index()) {
@@ -49,81 +49,81 @@ const ZONE_COLOR: Record<LeagueZone, string> = { direct: 'bg-volt', playoff: 'bg
             }
           </div>
           <div class="mt-3 flex items-center justify-between gap-3">
-            <p class="eyebrow truncate text-chalk/80">{{ session.tournament()?.name }} · Fin de la liguilla</p>
-            <button type="button" class="px-2 text-2xl text-chalk/80 hover:text-chalk" aria-label="Cerrar el resumen" (click)="$event.stopPropagation(); viewer.close()">
+            <p class="eyebrow gala-label truncate text-chalk/80">{{ session.tournament()?.name }} · Fin de la liguilla</p>
+            <button type="button" class="px-2 text-[max(1.5rem,5vmin)] text-chalk/80 hover:text-chalk" aria-label="Cerrar el resumen" (click)="$event.stopPropagation(); viewer.close()">
               <app-icon name="close" />
             </button>
           </div>
         </div>
 
         @for (k of keys(); track k) {
-          <section class="absolute inset-0 flex flex-col items-center justify-center px-5 pb-24 pt-24" aria-live="polite">
+          <section class="absolute inset-0 flex flex-col items-center justify-center px-[5vmin] pb-[max(6rem,17vmin)] pt-[max(6rem,14vmin)]" aria-live="polite">
             @switch (slide()) {
               @case ('table') {
                 <div class="absolute inset-0 -z-10 bg-[linear-gradient(115deg,var(--color-pitch)_0_40%,var(--color-ink)_40%_100%)]"></div>
-                <p class="eyebrow animate-rise text-cyan">Se cierra la liguilla</p>
-                <h2 class="heading mt-2 animate-slam text-[clamp(2.5rem,10vw,6rem)] [animation-delay:150ms]">Clasificación final</h2>
-                <div class="mt-6 flex w-full max-w-xl animate-rise items-center gap-3 pr-4 text-mist [animation-delay:400ms]" aria-hidden="true">
+                <p class="eyebrow gala-label animate-rise text-cyan">Se cierra la liguilla</p>
+                <h2 class="heading gala-heading mt-2 animate-slam [animation-delay:150ms]">Clasificación final</h2>
+                <div class="mt-[2vmin] flex w-full max-w-[min(100%,130vmin)] animate-rise items-center gap-3 pr-[2vmin] text-mist [animation-delay:400ms]" aria-hidden="true">
                   <span class="eyebrow flex-1"></span>
-                  <span class="eyebrow w-6 text-center">DG</span>
-                  <span class="eyebrow w-10 text-right">Pts</span>
+                  <span class="eyebrow gala-small w-[max(1.75rem,5vmin)] text-center">DG</span>
+                  <span class="eyebrow gala-small w-[max(2.5rem,7vmin)] text-right">Pts</span>
                 </div>
-                <ol class="mt-1.5 w-full max-w-xl space-y-1.5">
+                <ol class="mt-1.5 w-full max-w-[min(100%,130vmin)] space-y-[0.8vmin]">
                   @for (row of r.table; track row.teamId; let i = $index) {
                     <li
-                      class="flex animate-rise items-center gap-3 bg-pitch py-2 pl-0 pr-4"
+                      class="flex animate-rise items-center gap-[1.5vmin] bg-pitch py-[0.6vmin] pl-0 pr-[2vmin]"
                       [class.ring-2]="i === 0"
                       [class.ring-volt]="i === 0"
                       [style.animation-delay.ms]="revealDelay(i, r.table.length)"
                     >
-                      <span class="w-1.5 self-stretch" [class]="zoneColor[row.zone]"></span>
-                      <span class="heading w-6 text-center text-2xl tabular-nums" [class.text-volt]="i === 0">{{ i + 1 }}</span>
-                      <app-club-crest [club]="session.teamName(row.teamId)" size="1.6rem" />
-                      <span class="heading min-w-0 flex-1 truncate text-[clamp(1.25rem,5vw,2rem)]">{{ session.teamName(row.teamId) }}</span>
-                      <span class="w-6 text-center text-sm tabular-nums text-mist">{{ signed(row.goalDifference) }}</span>
-                      <span class="heading w-10 text-right text-2xl tabular-nums">{{ row.points }}</span>
+                      <span class="w-[max(0.375rem,0.8vmin)] self-stretch" [class]="zoneColor[row.zone]"></span>
+                      <span class="heading gala-row w-[1.5em] text-center tabular-nums" [class.text-volt]="i === 0">{{ i + 1 }}</span>
+                      <app-club-crest [club]="session.teamName(row.teamId)" size="max(1.6rem,4.6vmin)" />
+                      <span class="heading gala-row min-w-0 flex-1 truncate">{{ session.teamName(row.teamId) }}</span>
+                      <span class="gala-small w-[max(1.75rem,5vmin)] text-center tabular-nums text-mist">{{ signed(row.goalDifference) }}</span>
+                      <span class="heading gala-row w-[max(2.5rem,7vmin)] text-right tabular-nums">{{ row.points }}</span>
                     </li>
                   }
                 </ol>
                 <div class="mt-5 flex animate-rise flex-wrap justify-center gap-x-5 gap-y-2" [style.animation-delay.ms]="revealDelay(-1, r.table.length)">
                   @for (zone of zonesIn(r); track zone) {
-                    <span class="eyebrow flex items-center gap-2 text-mist"><span class="inline-block size-2.5" [class]="zoneColor[zone]"></span>{{ r.zoneLabels[zone] }}</span>
+                    <span class="eyebrow gala-small flex items-center gap-2 text-mist"><span class="inline-block size-[max(0.625rem,1.6vmin)]" [class]="zoneColor[zone]"></span>{{ r.zoneLabels[zone] }}</span>
                   }
                 </div>
               }
 
               @case ('numbers') {
                 <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_30%,#18d6ff22,var(--color-ink)_65%)]"></div>
-                <p class="eyebrow animate-rise text-cyan">La liguilla en números</p>
-                <div class="mt-6 grid w-full max-w-xl grid-cols-2 gap-3 text-center">
-                  <div class="cut animate-pop bg-volt p-4 text-ink [animation-delay:300ms]">
-                    <p class="heading text-[clamp(2.5rem,11vw,5rem)] tabular-nums"><app-count-up [value]="r.matches" [delay]="300" /></p>
-                    <p class="eyebrow">Partidos</p>
+                <p class="eyebrow gala-label animate-rise text-cyan">La liguilla en números</p>
+                <div class="mt-[2.5vmin] grid w-full max-w-[min(100%,130vmin)] grid-cols-2 gap-[2vmin] text-center">
+                  <div class="cut animate-pop bg-volt p-[2vmin] text-ink [animation-delay:300ms]">
+                    <p class="heading gala-stat tabular-nums"><app-count-up [value]="r.matches" [delay]="300" /></p>
+                    <p class="eyebrow gala-label">Partidos</p>
                   </div>
-                  <div class="cut animate-pop bg-cyan p-4 text-ink [animation-delay:600ms]">
-                    <p class="heading text-[clamp(2.5rem,11vw,5rem)] tabular-nums"><app-count-up [value]="r.goals" [delay]="600" /></p>
-                    <p class="eyebrow">Goles</p>
+                  <div class="cut animate-pop bg-cyan p-[2vmin] text-ink [animation-delay:600ms]">
+                    <p class="heading gala-stat tabular-nums"><app-count-up [value]="r.goals" [delay]="600" /></p>
+                    <p class="eyebrow gala-label">Goles</p>
                   </div>
                 </div>
-                <dl class="mt-6 w-full max-w-xl space-y-2">
-                  <div class="animate-rise bg-pitch px-4 py-3 [animation-delay:1300ms]">
-                    <dt class="eyebrow text-volt">Mejor ataque</dt>
-                    <dd class="heading mt-0.5 truncate text-[clamp(1.25rem,5.5vw,1.75rem)]">{{ session.teamName(r.bestAttack.teamId) }} <span class="text-mist">· {{ r.bestAttack.goalsFor }} goles</span></dd>
+                <dl class="mt-[2.5vmin] w-full max-w-[min(100%,130vmin)] space-y-[1vmin]">
+                  <div class="animate-rise bg-pitch px-[2vmin] py-[1.2vmin] [animation-delay:1300ms]">
+                    <dt class="eyebrow gala-small text-volt">Mejor ataque</dt>
+                    <dd class="heading gala-row mt-0.5 truncate">{{ session.teamName(r.bestAttack.teamId) }} <span class="text-mist">· {{ r.bestAttack.goalsFor }} goles</span></dd>
                   </div>
-                  <div class="animate-rise bg-pitch px-4 py-3 [animation-delay:2000ms]">
-                    <dt class="eyebrow text-cyan">Mejor defensa</dt>
-                    <dd class="heading mt-0.5 truncate text-[clamp(1.25rem,5.5vw,1.75rem)]">{{ session.teamName(r.bestDefence.teamId) }} <span class="text-mist">· {{ r.bestDefence.goalsAgainst }} en contra</span></dd>
+                  <div class="animate-rise bg-pitch px-[2vmin] py-[1.2vmin] [animation-delay:2000ms]">
+                    <dt class="eyebrow gala-small text-cyan">Mejor defensa</dt>
+                    <dd class="heading gala-row mt-0.5 truncate">{{ session.teamName(r.bestDefence.teamId) }} <span class="text-mist">· {{ r.bestDefence.goalsAgainst }} en contra</span></dd>
                   </div>
                   @if (r.biggestWin; as m) {
-                    <div class="animate-rise bg-pitch px-4 py-3 [animation-delay:2700ms]">
-                      <dt class="eyebrow text-flare">Mayor goleada</dt>
-                      <dd class="heading mt-0.5 truncate text-[clamp(1.25rem,5.5vw,1.75rem)]">{{ score(m) }}</dd>
+                    <div class="animate-rise bg-pitch px-[2vmin] py-[1.2vmin] [animation-delay:2700ms]">
+                      <dt class="eyebrow gala-small text-flare">Mayor goleada</dt>
+                      <dd class="heading gala-row mt-0.5 truncate">{{ score(m) }}</dd>
                     </div>
                   }
                   @if (r.topScorers; as s) {
-                    <div class="animate-rise bg-pitch px-4 py-3 [animation-delay:3400ms]">
-                      <dt class="eyebrow text-gold">Pichichi</dt>
-                      <dd class="heading mt-0.5 truncate text-[clamp(1.25rem,5.5vw,1.75rem)]">{{ names(s.participantIds) }} <span class="text-mist">· {{ s.goals }} {{ s.goals === 1 ? 'gol' : 'goles' }}</span></dd>
+                    <div class="animate-rise bg-pitch px-[2vmin] py-[1.2vmin] [animation-delay:3400ms]">
+                      <dt class="eyebrow gala-small text-gold">Pichichi</dt>
+                      <dd class="heading gala-row mt-0.5 truncate">{{ names(s.participantIds) }} <span class="text-mist">· {{ s.goals }} {{ s.goals === 1 ? 'gol' : 'goles' }}</span></dd>
                     </div>
                   }
                 </dl>
@@ -131,27 +131,27 @@ const ZONE_COLOR: Record<LeagueZone, string> = { direct: 'bg-volt', playoff: 'bg
 
               @case ('next') {
                 <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_40%,#ffc83d22,var(--color-ink)_65%)]"></div>
-                <p class="eyebrow animate-rise text-gold">Empieza lo bueno</p>
+                <p class="eyebrow gala-label animate-rise text-gold">Empieza lo bueno</p>
                 @if (r.decision; as d) {
-                  <app-club-crest class="mt-5 animate-pop [animation-delay:300ms]" [club]="session.teamName(d.chooserId)" size="clamp(4rem, 20vw, 7rem)" />
-                  <h2 class="heading mt-4 animate-slam text-center text-[clamp(2.5rem,11vw,6rem)] [animation-delay:600ms]">{{ session.teamName(d.chooserId) }}</h2>
-                  <p class="mt-3 animate-rise text-center font-display text-[clamp(1.25rem,5vw,2.25rem)] font-bold uppercase text-gold [animation-delay:1100ms]">
+                  <app-club-crest class="mt-5 animate-pop [animation-delay:300ms]" [club]="session.teamName(d.chooserId)" size="clamp(4rem, min(20vw, 20vh), 24rem)" />
+                  <h2 class="heading gala-title mt-4 animate-slam text-center [animation-delay:600ms]">{{ session.teamName(d.chooserId) }}</h2>
+                  <p class="gala-subtitle mt-3 animate-rise text-center font-display font-bold uppercase text-gold [animation-delay:1100ms]">
                     {{ decisionText(d.kind) }}
                   </p>
                 } @else {
-                  <h2 class="heading mt-2 animate-slam text-[clamp(2.5rem,10vw,5rem)] [animation-delay:150ms]">Así quedan los cruces</h2>
-                  <ol class="mt-6 w-full max-w-xl space-y-2">
+                  <h2 class="heading gala-heading mt-2 animate-slam [animation-delay:150ms]">Así quedan los cruces</h2>
+                  <ol class="mt-[2.5vmin] w-full max-w-[min(100%,130vmin)] space-y-[1vmin]">
                     @for (m of r.nextMatches; track m.id; let i = $index) {
-                      <li class="flex animate-rise items-center gap-3 bg-pitch px-4 py-3" [style.animation-delay.ms]="500 + i * 400">
-                        <span class="heading min-w-0 flex-1 truncate text-right text-[clamp(1.25rem,5vw,2rem)]">{{ session.teamName(m.homeId) }}</span>
-                        <span class="heading text-mist">vs</span>
-                        <span class="heading min-w-0 flex-1 truncate text-[clamp(1.25rem,5vw,2rem)]">{{ session.teamName(m.awayId) }}</span>
+                      <li class="flex animate-rise items-center gap-[1.5vmin] bg-pitch px-[2vmin] py-[1.5vmin]" [style.animation-delay.ms]="500 + i * 400">
+                        <span class="heading gala-row min-w-0 flex-1 truncate text-right">{{ session.teamName(m.homeId) }}</span>
+                        <span class="heading gala-row text-mist">vs</span>
+                        <span class="heading gala-row min-w-0 flex-1 truncate">{{ session.teamName(m.awayId) }}</span>
                       </li>
                     }
                   </ol>
                 }
                 @if (directTeams(r).length) {
-                  <p class="mt-6 animate-rise text-center text-mist [animation-delay:1800ms]">
+                  <p class="gala-text mt-[2.5vmin] animate-rise text-center text-mist [animation-delay:1800ms]">
                     {{ r.zoneLabels.direct }}: <span class="font-semibold text-chalk">{{ teamNames(directTeams(r)) }}</span>
                   </p>
                 }
@@ -160,12 +160,12 @@ const ZONE_COLOR: Record<LeagueZone, string> = { direct: 'bg-volt', playoff: 'bg
           </section>
         }
 
-        <div class="absolute inset-x-0 bottom-0 z-20 flex justify-center gap-3 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        <div class="absolute inset-x-0 bottom-0 z-20 flex justify-center gap-[1.5vmin] px-4 pb-[max(1.25rem,env(safe-area-inset-bottom),3vmin)]">
           @if (finished()) {
-            <button type="button" class="btn-secondary" (click)="$event.stopPropagation(); restart()">Volver a verlo</button>
-            <button type="button" class="btn-primary" (click)="$event.stopPropagation(); viewer.close()">A por las eliminatorias</button>
+            <button type="button" class="btn-secondary !px-[1.4em] !py-[0.6em] !text-[max(1rem,3.2vmin)]" (click)="$event.stopPropagation(); restart()">Volver a verlo</button>
+            <button type="button" class="btn-primary !px-[1.4em] !py-[0.6em] !text-[max(1rem,3.2vmin)]" (click)="$event.stopPropagation(); viewer.close()">A por las eliminatorias</button>
           } @else {
-            <p class="eyebrow text-chalk/50">Toca para avanzar</p>
+            <p class="eyebrow gala-label text-chalk/50">Toca para avanzar</p>
           }
         </div>
       </div>

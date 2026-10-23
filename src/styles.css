@@ -191,6 +191,18 @@
 @utility gala-text {
   font-size: max(1rem, 3vmin);
 }
+@utility gala-heading {
+  font-size: clamp(2.5rem, min(10vw, 9vmin), 20rem);
+}
+@utility gala-stat {
+  font-size: clamp(2.5rem, min(11vw, 13vmin), 20rem);
+}
+@utility gala-row {
+  font-size: clamp(1.25rem, min(5vw, 4vmin), 12rem);
+}
+@utility gala-small {
+  font-size: max(0.875rem, 2.6vmin);
+}
 
 /* TV mode sizes everything to the screen: ~17px on a 1080p TV, never under 12px on a tablet. */
 html.tv-screen {

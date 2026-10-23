@@ -23,8 +23,8 @@ import { Icon } from '../../ui/icon';
         aria-label="Momento de elegir"
       >
         <div class="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_30%,#ffc83d26,var(--color-ink)_65%)]"></div>
-        <div class="flex items-center justify-between gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))]">
-          <p class="eyebrow truncate text-chalk/80">{{ t.name }} · {{ stageName() }}</p>
+        <div class="flex items-center justify-between gap-3 px-[3vmin] pt-[max(1rem,env(safe-area-inset-top),3vmin)]">
+          <p class="eyebrow gala-label truncate text-chalk/80">{{ t.name }} · {{ stageName() }}</p>
           @if (!display()) {
             <button type="button" class="px-2 text-2xl text-chalk/80 hover:text-chalk" aria-label="Cerrar" (click)="viewer.close()"><app-icon name="close" /></button>
           }
@@ -32,41 +32,41 @@ import { Icon } from '../../ui/icon';
 
         @if (viewer.reveal(); as r) {
           <!-- The pick, revealed on every screen -->
-          <section class="flex flex-1 flex-col items-center justify-center px-6 pb-16 text-center" aria-live="assertive">
-            <app-club-crest class="animate-pop" [club]="session.teamName(r.chooserId)" size="clamp(3.5rem, 16vw, 6rem)" />
-            <p class="heading mt-3 animate-rise text-[clamp(1.75rem,7vw,3.5rem)]">
+          <section class="flex flex-1 flex-col items-center justify-center px-[5vmin] pb-[6vmin] text-center" aria-live="assertive">
+            <app-club-crest class="animate-pop" [club]="session.teamName(r.chooserId)" size="clamp(3.5rem, min(16vw, 14vh), 18rem)" />
+            <p class="heading gala-subtitle mt-3 animate-rise">
               {{ session.teamName(r.chooserId) }} <span class="text-mist">{{ r.opponentId ? 'elige a…' : 'jugará…' }}</span>
             </p>
             @if (r.opponentId; as rival) {
-              <app-club-crest class="mt-8 animate-pop [animation-delay:1400ms]" [club]="session.teamName(rival)" size="clamp(6rem, 30vw, 11rem)" />
-              <h2 class="heading gold-text mt-4 animate-slam text-[clamp(3rem,15vw,9rem)] [animation-delay:1600ms]">{{ session.teamName(rival) }}</h2>
-              <p class="mt-4 animate-rise font-display text-[clamp(1.25rem,5vw,2.25rem)] font-bold uppercase text-mist [animation-delay:2400ms]">
+              <app-club-crest class="mt-[3vmin] animate-pop [animation-delay:1400ms]" [club]="session.teamName(rival)" size="clamp(6rem, min(30vw, 26vh), 30rem)" />
+              <h2 class="heading gold-text gala-title-xl mt-4 animate-slam [animation-delay:1600ms]">{{ session.teamName(rival) }}</h2>
+              <p class="gala-subtitle mt-4 animate-rise font-display font-bold uppercase text-mist [animation-delay:2400ms]">
                 {{ session.teamName(r.chooserId) }} vs {{ session.teamName(rival) }}
               </p>
             } @else {
-              <h2 class="heading gold-text mt-8 animate-slam text-[clamp(3rem,15vw,9rem)] [animation-delay:1400ms]">
+              <h2 class="heading gold-text gala-title-xl mt-[3vmin] animate-slam [animation-delay:1400ms]">
                 {{ r.first ? 'Primero' : 'Segundo' }}
               </h2>
             }
           </section>
         } @else if (viewer.decision(); as d) {
-          <section class="flex flex-1 flex-col items-center justify-center px-5 pb-10 pt-6 text-center" aria-live="polite">
-            <p class="eyebrow animate-rise text-gold">Momento de elegir</p>
-            <app-club-crest class="mt-4 animate-pop [animation-delay:200ms]" [club]="session.teamName(d.chooserId)" size="clamp(4rem, 20vw, 7.5rem)" />
-            <h2 class="heading mt-3 animate-slam text-[clamp(2.75rem,12vw,7rem)] [animation-delay:400ms]">{{ session.teamName(d.chooserId) }}</h2>
-            <p class="mt-1 animate-rise font-display text-[clamp(1.25rem,5vw,2.25rem)] font-bold uppercase text-gold [animation-delay:800ms]">
+          <section class="flex flex-1 flex-col items-center justify-center px-[4vmin] pb-[4vmin] pt-[2vmin] text-center" aria-live="polite">
+            <p class="eyebrow gala-label animate-rise text-gold">Momento de elegir</p>
+            <app-club-crest class="mt-4 animate-pop [animation-delay:200ms]" [club]="session.teamName(d.chooserId)" size="clamp(3.5rem, min(20vw, 12vh), 22rem)" />
+            <h2 class="heading mt-2 animate-slam text-[clamp(2.75rem,min(12vw,11vmin),20rem)] [animation-delay:400ms]">{{ session.teamName(d.chooserId) }}</h2>
+            <p class="mt-1 animate-rise font-display text-[clamp(1.25rem,min(5vw,5.2vmin),8rem)] font-bold uppercase text-gold [animation-delay:800ms]">
               {{ question() }}
             </p>
-            <p class="mt-2 animate-rise text-mist [animation-delay:1000ms]">
+            <p class="gala-text mt-2 animate-rise text-mist [animation-delay:1000ms]">
               {{ reason() }} · {{ session.memberNames(d.chooserId).join(' + ') }}
             </p>
 
             @if (d.kind === 'playoffOpponent' || d.kind === 'semiOpponent') {
-              <div class="mt-8 grid w-full max-w-2xl gap-3" [class]="d.options.length > 2 ? 'grid-cols-3' : 'grid-cols-2'">
+              <div class="mt-[2.5vmin] grid w-full max-w-[min(100%,150vmin)] gap-[2vmin]" [class]="d.options.length > 2 ? 'grid-cols-3' : 'grid-cols-2'">
                 @for (option of d.options; track option; let i = $index) {
                   <button
                     type="button"
-                    class="cut flex animate-rise flex-col items-center gap-2 border-2 bg-pitch px-2 py-4 transition disabled:cursor-default"
+                    class="cut flex animate-rise flex-col items-center gap-[1vmin] border-2 bg-pitch px-[1vmin] py-[2vmin] transition disabled:cursor-default"
                     [class]="picked() === option ? 'border-gold bg-gold/10' : 'border-transparent'"
                     [class.animate-suspense]="!canChoose()"
                     [style.animation-delay.ms]="1200 + i * 200"
@@ -74,41 +74,41 @@ import { Icon } from '../../ui/icon';
                     [attr.aria-pressed]="canChoose() ? picked() === option : null"
                     (click)="picked.set(option)"
                   >
-                    <app-club-crest [club]="session.teamName(option)" size="clamp(2.5rem, 12vw, 4.5rem)" />
-                    <span class="heading max-w-full truncate text-[clamp(1rem,4.5vw,1.75rem)]">{{ session.teamName(option) }}</span>
-                    <span class="eyebrow text-mist">{{ position(option) }}º en liguilla</span>
+                    <app-club-crest [club]="session.teamName(option)" size="clamp(2.5rem, min(12vw, 8vh), 14rem)" />
+                    <span class="heading gala-row max-w-full truncate">{{ session.teamName(option) }}</span>
+                    <span class="eyebrow gala-small text-mist">{{ position(option) }}º en liguilla</span>
                   </button>
                 }
               </div>
             } @else {
-              <div class="mt-8 grid w-full max-w-md grid-cols-2 gap-3">
+              <div class="mt-[3vmin] grid w-full max-w-[min(100%,100vmin)] grid-cols-2 gap-[2vmin]">
                 @for (first of [true, false]; track first; let i = $index) {
                   <button
                     type="button"
-                    class="cut animate-rise border-2 bg-pitch px-3 py-5 transition disabled:cursor-default"
+                    class="cut animate-rise border-2 bg-pitch px-[1.5vmin] py-[3vmin] transition disabled:cursor-default"
                     [class]="picked() === first ? 'border-gold bg-gold/10' : 'border-transparent'"
                     [style.animation-delay.ms]="1200 + i * 200"
                     [disabled]="!canChoose() || session.saving()"
                     [attr.aria-pressed]="canChoose() ? picked() === first : null"
                     (click)="picked.set(first)"
                   >
-                    <span class="heading text-[clamp(1.5rem,6vw,2.5rem)]">{{ first ? 'Primero' : 'Segundo' }}</span>
+                    <span class="heading gala-subtitle">{{ first ? 'Primero' : 'Segundo' }}</span>
                   </button>
                 }
               </div>
             }
 
-            <div class="mt-8 min-h-14">
+            <div class="mt-[2.5vmin] min-h-14">
               @if (canChoose()) {
                 @if (picked() !== null) {
-                  <button type="button" class="btn-primary px-10 text-lg" [disabled]="session.saving()" (click)="confirm()">
+                  <button type="button" class="btn-primary !px-[1.6em] !py-[0.6em] !text-[max(1.125rem,3.2vmin)]" [disabled]="session.saving()" (click)="confirm()">
                     {{ confirmLabel() }}
                   </button>
                 } @else {
-                  <p class="eyebrow text-chalk/70">{{ viewer.mine() ? 'Os toca elegir: tocad una opción' : 'Elige por ellos como admin' }}</p>
+                  <p class="eyebrow gala-label text-chalk/70">{{ viewer.mine() ? 'Os toca elegir: tocad una opción' : 'Elige por ellos como admin' }}</p>
                 }
               } @else {
-                <p class="eyebrow animate-pulse-live text-chalk/70">Esperando a que elijan…</p>
+                <p class="eyebrow gala-label animate-pulse-live text-chalk/70">Esperando a que elijan…</p>
               }
             </div>
           </section>
