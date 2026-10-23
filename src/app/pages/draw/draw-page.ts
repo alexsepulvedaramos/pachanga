@@ -378,7 +378,7 @@ export class DrawPage {
   protected spinWheel(): void {
     const t = this.session.tournament();
     if (!t || this.busy()) return;
-    const result = spin(t, Math.random, this.session.apart());
+    const result = spin(t, Math.random, this.session.drawRules());
     this.pending = result.tournament;
     this.busy.set(true);
     this.reveal.set(null);

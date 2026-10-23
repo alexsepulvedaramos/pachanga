@@ -16,9 +16,9 @@ function fresh(players: number): Tournament {
   });
 }
 
-function wheel(t: Tournament, seed: number, apart = {}): Tournament {
+function wheel(t: Tournament, seed: number, apart = {}, noSolo: string[] = []): Tournament {
   const rng = seededRng(seed);
-  while (nextToSpin(t)) t = spin(t, rng, apart).tournament;
+  while (nextToSpin(t)) t = spin(t, rng, { apart, noSolo }).tournament;
   return t;
 }
 
@@ -56,8 +56,24 @@ describe('keeping players apart', () => {
     let apart = {};
     for (const o of ['p2', 'p3', 'p4', 'p5', 'p6']) apart = toggleApart(apart, 'p1', o);
     const t = fresh(6);
-    expect(drawIsPossible(t, apart)).toBe(false);
-    expect(allowedClubs(t, 'p1', apart).size).toBe(0);
+    expect(drawIsPossible(t, { apart, noSolo: [] })).toBe(false);
+    expect(allowedClubs(t, 'p1', { apart, noSolo: [] }).size).toBe(0);
     expect(nextToSpin(wheel(t, 3, apart))).toBeNull();
+  });
+});
+
+describe('keeping players from playing alone', () => {
+  it('never leaves them as the solo player', () => {
+    for (let seed = 1; seed <= 200; seed++) {
+      const t = wheel(fresh(7), seed, {}, ['p1', 'p2']);
+      for (const [, ids] of drawnPairs(t)) {
+        if (ids.length === 1) expect(['p1', 'p2']).not.toContain(ids[0]);
+      }
+    }
+  });
+
+  it('is impossible when everybody is protected and the number is odd', () => {
+    const everyone = Array.from({ length: 7 }, (_, i) => `p${i + 1}`);
+    expect(drawIsPossible(fresh(7), { apart: {}, noSolo: everyone })).toBe(false);
   });
 });

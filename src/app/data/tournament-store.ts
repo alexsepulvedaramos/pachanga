@@ -21,6 +21,7 @@ const deviceTokenKey = (id: string) => `pachanga:vote-token:${id}`;
 const guestKey = (id: string) => `pachanga:guest:${id}`;
 const ballotsKey = (id: string) => `pachanga:ballots:${id}`;
 const apartKey = (id: string) => `pachanga:apart:${id}`;
+const noSoloKey = (id: string) => `pachanga:nosolo:${id}`;
 const apartCodeKey = 'pachanga:apart-code';
 
 const isDemo = (id: string) => id.startsWith(DEMO_PREFIX);
@@ -79,7 +80,7 @@ export class TournamentStore {
   /** Removes a tournament from this device only: recent list, PIN and preferences. */
   forget(id: string): void {
     this.writeRecent(this.recent().filter((r) => r.id !== id));
-    for (const k of [pinKey(id), meKey(id), pushKey(id), deviceTokenKey(id), ballotsKey(id), guestKey(id), apartKey(id)]) this.storage(id)?.removeItem(k);
+    for (const k of [pinKey(id), meKey(id), pushKey(id), deviceTokenKey(id), ballotsKey(id), guestKey(id), apartKey(id), noSoloKey(id)]) this.storage(id)?.removeItem(k);
   }
 
   savedPin(id: string): string | null {
@@ -150,6 +151,19 @@ export class TournamentStore {
 
   rememberApart(id: string, apart: Apart): void {
     this.set(id, apartKey(id), JSON.stringify(apart));
+  }
+
+  /** People who must not be left playing alone in the wheel. Only on this device. */
+  savedNoSolo(id: string): string[] {
+    try {
+      return JSON.parse(this.storage(id)?.getItem(noSoloKey(id)) ?? '[]') as string[];
+    } catch {
+      return [];
+    }
+  }
+
+  rememberNoSolo(id: string, noSolo: string[]): void {
+    this.set(id, noSoloKey(id), JSON.stringify(noSolo));
   }
 
   /** Code that opens the hidden panel on this device; null until the admin sets one. */

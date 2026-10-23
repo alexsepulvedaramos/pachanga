@@ -10,7 +10,7 @@ import {
   Tournament,
   TournamentConfig,
 } from './types';
-import { Apart, allowedClubs } from './apart';
+import { DrawRules, NO_RULES, allowedClubs } from './apart';
 import { Rng, pick, shuffle } from './rng';
 import { buildGroupSchedule } from './schedule';
 import { computeStandings, DEFAULT_TIEBREAKERS, StandingRow } from './standings';
@@ -144,14 +144,15 @@ export function shuffleEntranceOrder(t: Tournament, rng: Rng): Tournament {
 
 /**
  * The next participant in the entrance order spins the wheel. Returns the club drawn. People in
- * `apart` never land with each other, unless the restrictions can't all be met any more.
+ * `rules` are followed (nobody lands with who they must avoid, nobody is left alone against their
+ * rule), unless they can't all be met any more.
  */
-export function spin(t: Tournament, rng: Rng, apart: Apart = {}): { tournament: Tournament; club: string } {
+export function spin(t: Tournament, rng: Rng, rules: DrawRules = NO_RULES): { tournament: Tournament; club: string } {
   assertStage(t, 'draw');
   const spinner = nextToSpin(t);
   if (!spinner) throw new TournamentError('Ya han girado todos.');
   const entries = wheelEntries(t);
-  const allowed = allowedClubs(t, spinner.id, apart);
+  const allowed = allowedClubs(t, spinner.id, rules);
   const fits = entries.filter((c) => allowed.has(c));
   const club = pick(fits.length > 0 ? fits : entries, rng);
   const picks = [...t.draw.picks, { participantId: spinner.id, club }];
