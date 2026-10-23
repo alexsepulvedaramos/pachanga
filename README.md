@@ -26,8 +26,8 @@ their own phones or on the TV.
 - **Live standings** with tiebreakers chosen and ordered when the tournament is set up
   (goal difference, goals for, head-to-head, wins, drawing of lots…).
 - **Playoff and bracket as the house rules want them.** With 5–7 pairs, top two go straight to
-  the semis, 3rd–6th play a playoff where the 3rd picks their opponent (the 5th or the 6th, never the 4th) and the 4th picks the order; the group winner
-  picks their semi-final opponent (never the 2nd). Extra time and penalties in knockout matches.
+  the semis, 3rd–6th play a playoff where the 3rd picks their opponent (the 5th or the 6th, never the 4th) and the 5th picks which tie goes first; the group winner
+  picks their semi-final opponent (never the 2nd) and the 3rd semi-finalist picks which semi goes first. Extra time and penalties in knockout matches.
 - **Solo player support.** Before each of their matches the solo player gets a partner drawn from
   whoever isn't playing; for the knockout stage they draw a fixed partner from eliminated players.
   Injuries mid-tournament turn the partner into a solo player automatically.
@@ -146,8 +146,8 @@ Where the rulebook leaves room for interpretation, the app does this:
   their team got, then the drawing of lots.
 - **Solo player in the playoff:** nobody is eliminated yet, so they get a drawn stand-in per match,
   as in the group stage. The fixed partner from the eliminated players is drawn for the semis.
-- **Choices skip the runner-up:** the group winner can't pick the 2nd as semi-final opponent, and the 3rd can't pick
-  the 4th in the playoff: the better-ranked of the two gets the remaining tie, which is the privilege of ranking higher.
+- **One privilege each in the playoff and the semis:** the best-ranked picks the rival, the second can't be picked
+  (it plays whoever is left), the third sets which tie goes first and the fourth gets nothing.
 - **A withdrawal while someone already plays solo:** both play as solo players with drawn
   stand-ins rather than merging into one team.
 - **Suspended player:** their partner plays the match alone; a solo player who is suspended is

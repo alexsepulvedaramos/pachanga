@@ -167,7 +167,22 @@ describe('knockout', () => {
     expect(decision).toEqual({ kind: 'semiOpponent', chooserId: 's1', options: ['s3', 's4'] });
   });
 
-  it('lets the 3rd pick the playoff opponent and the 4th pick the order', () => {
+  it('lets the 3rd semi-finalist pick which semi-final goes first', () => {
+    const matches = ['po1', 'po2'].map((id, i) => ({
+      id,
+      phase: 'playoff' as const,
+      homeId: i ? 's4' : 's3',
+      awayId: i ? 's5' : 's6',
+      status: 'done' as const,
+      homeGoals: 1,
+      awayGoals: 0,
+    }));
+    // The playoff winners are the 3rd and the 4th: the 3rd of the four semi-finalists is the 3rd.
+    const choices = { playoffOpponentId: 's6', playoffChooserFirst: true, semiOpponentId: 's4' };
+    expect(pendingDecision(ranking, choices, matches)).toEqual({ kind: 'semiOrder', chooserId: 's3' });
+  });
+
+  it('lets the 3rd pick the playoff opponent and the 5th pick the order', () => {
     expect(pendingDecision(ranking, {}, [])).toEqual({
       kind: 'playoffOpponent',
       chooserId: 's3',
@@ -176,7 +191,7 @@ describe('knockout', () => {
     });
     expect(pendingDecision(ranking, { playoffOpponentId: 's6' }, [])).toEqual({
       kind: 'playoffOrder',
-      chooserId: 's4',
+      chooserId: 's5',
     });
     const later = nextKnockoutMatches(ranking, { playoffOpponentId: 's6', playoffChooserFirst: false }, []);
     expect(later.map((m) => [m.homeId, m.awayId])).toEqual([
