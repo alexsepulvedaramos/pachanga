@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { hasBackend } from '../config';
+import { Apart } from '../domain/apart';
 import { Tournament } from '../domain/types';
 import { LocalTournamentRepository } from './local-tournament-repository';
 import { DEMO_PREFIX, NotFoundError, StoredTournament, TournamentRepository } from './tournament-repository';
@@ -19,6 +20,8 @@ const pushKey = (id: string) => `pachanga:push:${id}`;
 const deviceTokenKey = (id: string) => `pachanga:vote-token:${id}`;
 const guestKey = (id: string) => `pachanga:guest:${id}`;
 const ballotsKey = (id: string) => `pachanga:ballots:${id}`;
+const apartKey = (id: string) => `pachanga:apart:${id}`;
+const apartCodeKey = 'pachanga:apart-code';
 
 const isDemo = (id: string) => id.startsWith(DEMO_PREFIX);
 
@@ -76,7 +79,7 @@ export class TournamentStore {
   /** Removes a tournament from this device only: recent list, PIN and preferences. */
   forget(id: string): void {
     this.writeRecent(this.recent().filter((r) => r.id !== id));
-    for (const k of [pinKey(id), meKey(id), pushKey(id), deviceTokenKey(id), ballotsKey(id), guestKey(id)]) this.storage(id)?.removeItem(k);
+    for (const k of [pinKey(id), meKey(id), pushKey(id), deviceTokenKey(id), ballotsKey(id), guestKey(id), apartKey(id)]) this.storage(id)?.removeItem(k);
   }
 
   savedPin(id: string): string | null {
@@ -134,6 +137,36 @@ export class TournamentStore {
   rememberGuest(id: string, guest: boolean): void {
     if (guest) this.set(id, guestKey(id), '1');
     else this.storage(id)?.removeItem(guestKey(id));
+  }
+
+  /** People kept off the same team in the wheel. Only ever on this device, never in the tournament. */
+  savedApart(id: string): Apart {
+    try {
+      return JSON.parse(this.storage(id)?.getItem(apartKey(id)) ?? '{}') as Apart;
+    } catch {
+      return {};
+    }
+  }
+
+  rememberApart(id: string, apart: Apart): void {
+    this.set(id, apartKey(id), JSON.stringify(apart));
+  }
+
+  /** Code that opens the hidden panel on this device; null until the admin sets one. */
+  apartCode(): string | null {
+    try {
+      return localStorage.getItem(apartCodeKey);
+    } catch {
+      return null;
+    }
+  }
+
+  setApartCode(code: string): void {
+    try {
+      localStorage.setItem(apartCodeKey, code);
+    } catch {
+      /* private mode: asked again next visit */
+    }
   }
 
   recent(): RecentTournament[] {
