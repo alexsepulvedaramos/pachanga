@@ -143,7 +143,8 @@ Where the rulebook leaves room for interpretation, the app does this:
   their team got, then the drawing of lots.
 - **Solo player in the playoff:** nobody is eliminated yet, so they get a drawn stand-in per match,
   as in the group stage. The fixed partner from the eliminated players is drawn for the semis.
-- **Group winner's pick:** the 1st can choose any of the other semi-finalists, the 2nd included.
+- **Group winner's pick:** the 1st chooses among the semi-finalists other than the 2nd, who always gets the
+  remaining tie: that is the privilege of finishing 2nd.
 - **A withdrawal while someone already plays solo:** both play as solo players with drawn
   stand-ins rather than merging into one team.
 - **Suspended player:** their partner plays the match alone; a solo player who is suspended is

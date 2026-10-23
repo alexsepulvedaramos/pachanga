@@ -232,7 +232,7 @@ function pendingDecision(ranking, choices, matches) {
   if (semis && byPhase(matches, "semi").length === 0) {
     const [chooser, orderChooser] = semis;
     if (!choices.semiOpponentId) {
-      return { kind: "semiOpponent", chooserId: chooser, options: semis.slice(1) };
+      return { kind: "semiOpponent", chooserId: chooser, options: semis.slice(2) };
     }
     if (choices.semiChooserFirst === void 0) {
       return { kind: "semiOrder", chooserId: orderChooser };

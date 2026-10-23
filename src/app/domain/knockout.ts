@@ -196,7 +196,8 @@ export function pendingDecision(
   if (semis && byPhase(matches, 'semi').length === 0) {
     const [chooser, orderChooser] = semis;
     if (!choices.semiOpponentId) {
-      return { kind: 'semiOpponent', chooserId: chooser, options: semis.slice(1) };
+      // The 2nd can't be picked: being 2nd is what keeps the group winner away from them.
+      return { kind: 'semiOpponent', chooserId: chooser, options: semis.slice(2) };
     }
     if (choices.semiChooserFirst === undefined) {
       return { kind: 'semiOrder', chooserId: orderChooser };
