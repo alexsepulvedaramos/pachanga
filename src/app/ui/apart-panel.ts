@@ -33,7 +33,7 @@ const MIN_CODE = 4;
         </p>
         @if (!possible()) {
           <p class="mt-3 border-l-4 border-flare bg-flare/10 p-3 text-sm text-flare">
-            Con estas restricciones no hay reparto posible: la ruleta las ignorará cuando no pueda cumplirlas.
+            Ahora mismo no se pueden cumplir todas: la ruleta girará al azar, sin avisar en pantalla.
           </p>
         }
         <ul class="mt-4 space-y-3">

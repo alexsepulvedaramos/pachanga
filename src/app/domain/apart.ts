@@ -68,7 +68,7 @@ export function allowedClubs(t: Tournament, participantId: Id, apart: Apart): Se
   return allowed;
 }
 
-/** Whether a draw exists at all that respects every restriction, from scratch. */
+/** Whether the draw, as it stands now, can still be finished without breaking a restriction. */
 export function drawIsPossible(t: Tournament, apart: Apart): boolean {
-  return completable(t, apart, []);
+  return completable(t, apart, t.draw.picks);
 }
