@@ -96,7 +96,7 @@ function semiFinalists(ranking, matches) {
 function pendingDecision(ranking, choices, matches) {
   const pool = playoffTeams(ranking);
   if (pool.length === 4 && byPhase(matches, "playoff").length === 0) {
-    const [chooser, orderChooser] = pool;
+    const [chooser, , orderChooser] = pool;
     if (!choices.playoffOpponentId) {
       return { kind: "playoffOpponent", chooserId: chooser, options: pool.slice(2) };
     }
@@ -106,7 +106,7 @@ function pendingDecision(ranking, choices, matches) {
   }
   const semis = knockoutFormat(ranking.length).choices ? semiFinalists(ranking, matches) : null;
   if (semis && byPhase(matches, "semi").length === 0) {
-    const [chooser, orderChooser] = semis;
+    const [chooser, , orderChooser] = semis;
     if (!choices.semiOpponentId) {
       return { kind: "semiOpponent", chooserId: chooser, options: semis.slice(2) };
     }

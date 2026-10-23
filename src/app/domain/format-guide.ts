@@ -28,7 +28,7 @@ function knockoutItems(teamCount: number): string[] {
         'Pasan directos a semifinales el 1º, el 2º y el 3º.',
         'El 4º y el 5º juegan la repesca, a partido único: el ganador entra en semifinales.',
         'En semifinales, el 1º elige su rival entre el 3º y el ganador de la repesca. No puede elegir al 2º: ese es el privilegio de quedar segundo, que juega contra el que sobra.',
-        'El 2º decide si su semifinal se juega primera o segunda.',
+        'El 3º decide si su semifinal se juega primera o segunda.',
         'Los perdedores de las semis juegan por el tercer puesto y los ganadores, la final.',
       ];
     case 6:
@@ -38,9 +38,9 @@ function knockoutItems(teamCount: number): string[] {
         teamCount === 7
           ? 'La repesca la juegan el 3º, el 4º, el 5º y el 6º. El 7º queda eliminado.'
           : 'La repesca la juegan el 3º, el 4º, el 5º y el 6º.',
-        'En la repesca, el 3º elige su rival entre el 5º y el 6º. No puede elegir al 4º, que juega contra el que sobra y decide si su partido va primero o segundo.',
+        'En la repesca, el 3º elige su rival entre el 5º y el 6º. No puede elegir al 4º, que juega contra el que sobra. El 5º decide si su partido de repesca va primero o segundo.',
         'Los dos ganadores de la repesca entran en semifinales.',
-        'En semifinales, el 1º elige su rival entre los dos que vienen de la repesca. No puede elegir al 2º, que juega contra el que sobra y decide si su semifinal va primera o segunda.',
+        'En semifinales, el 1º elige su rival entre los dos que vienen de la repesca. No puede elegir al 2º, que juega contra el que sobra. El ganador de la repesca mejor clasificado en la liguilla decide si su semifinal va primera o segunda.',
         'Los perdedores de las semis juegan por el tercer puesto y los ganadores, la final.',
       ];
     default:

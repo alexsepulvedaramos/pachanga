@@ -183,7 +183,8 @@ export function pendingDecision(
   const pool = playoffTeams(ranking);
 
   if (pool.length === 4 && byPhase(matches, 'playoff').length === 0) {
-    const [chooser, orderChooser] = pool;
+    // One privilege each: the 3rd picks the rival, the 4th can't be picked, the 5th sets the order.
+    const [chooser, , orderChooser] = pool;
     if (!choices.playoffOpponentId) {
       // The 4th can't be picked, like the 2nd in the semis: being better ranked is the privilege.
       return { kind: 'playoffOpponent', chooserId: chooser, options: pool.slice(2) };
@@ -195,7 +196,8 @@ export function pendingDecision(
 
   const semis = knockoutFormat(ranking.length).choices ? semiFinalists(ranking, matches) : null;
   if (semis && byPhase(matches, 'semi').length === 0) {
-    const [chooser, orderChooser] = semis;
+    // The same: the 1st picks, the 2nd can't be picked, the 3rd semi-finalist sets the order.
+    const [chooser, , orderChooser] = semis;
     if (!choices.semiOpponentId) {
       // The 2nd can't be picked: being 2nd is what keeps the group winner away from them.
       return { kind: 'semiOpponent', chooserId: chooser, options: semis.slice(2) };
@@ -267,7 +269,7 @@ export function nextKnockoutMatches(
 
 /**
  * Builds two matches from four teams (best first): the best picks its opponent, the remaining two
- * play each other, and the second best decides whether its own match goes first.
+ * play each other, and the third best decides whether its own match goes first.
  */
 function pairUp(
   prefix: string,
@@ -276,7 +278,7 @@ function pairUp(
   opponentId: Id,
   orderChooserFirst: boolean,
 ): Match[] {
-  const [chooser, orderChooser] = teams;
+  const [chooser, , orderChooser] = teams;
   const rest = teams.filter((id) => id !== chooser && id !== opponentId);
   const chooserMatch: [Id, Id] = [chooser, opponentId];
   const otherMatch: [Id, Id] = [rest[0], rest[1]];
