@@ -455,9 +455,12 @@ var teamIds = (t) => t.teams.map((x) => x.id);
 function partnerSeeker(t) {
   if (t.config.soloPartner !== "bestEliminated" || t.stage !== "knockout" || !t.groupRanking) return null;
   const ranking = t.groupRanking;
-  const waiting = t.teams.filter(
-    (x) => !x.knockoutPartnerId && isSolo(t, x.id) && t.matches.some((m) => isLateKnockout(m) && m.status !== "done" && [m.homeId, m.awayId].includes(x.id))
-  );
+  const through = semiFinalists(ranking, t.matches) ?? [];
+  const waiting = t.teams.filter((x) => {
+    if (x.knockoutPartnerId || !isSolo(t, x.id) || !through.includes(x.id)) return false;
+    const late = t.matches.filter((m) => isLateKnockout(m) && [m.homeId, m.awayId].includes(x.id));
+    return late.length === 0 || late.some((m) => m.status !== "done");
+  });
   waiting.sort((a, b) => ranking.indexOf(a.id) - ranking.indexOf(b.id));
   return waiting[0]?.id ?? null;
 }
