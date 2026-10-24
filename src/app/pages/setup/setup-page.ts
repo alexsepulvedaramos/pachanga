@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { RematchDraft } from '../../domain/rematch';
 import { Brand } from '../../ui/brand';
@@ -28,6 +28,39 @@ const CLUB_SUGGESTIONS = [
   'Atlético', 'Juventus', 'Milan', 'Dortmund', 'Napoli', 'Chelsea', 'Leverkusen',
 ];
 
+const DRAFT_KEY = 'pachanga:setup-draft';
+
+/** What the form holds, saved on every change so leaving the page doesn't lose it. */
+interface SetupDraft {
+  name: string;
+  players: string[];
+  clubs: string[];
+  tiebreakers: TiebreakCriterion[];
+  trackScorers: boolean;
+  ballonDor: boolean;
+  minuteOverrides: Partial<HalfMinutes>;
+  changeover: number;
+  pin: string;
+}
+
+function loadDraft(): Partial<SetupDraft> | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    const draft = raw ? (JSON.parse(raw) as Partial<SetupDraft>) : null;
+    return draft && typeof draft === 'object' ? draft : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft(): void {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
 @Component({
   selector: 'app-setup-page',
   imports: [Brand, RouterLink, ClubPicker, Icon],
@@ -37,6 +70,15 @@ const CLUB_SUGGESTIONS = [
         <a routerLink="/"><app-brand size="sm" /></a>
         <span class="eyebrow text-mist">Nuevo torneo</span>
       </header>
+
+      @if (restored()) {
+        <p class="cut-sm mt-6 flex items-center justify-between gap-3 border-l-4 border-cyan bg-pitch px-4 py-2 text-sm">
+          <span>Hemos recuperado lo que tenías a medias.</span>
+          <button type="button" class="tag shrink-0 bg-line text-mist hover:bg-flare hover:text-ink" (click)="discardDraft()">
+            Empezar de cero
+          </button>
+        </p>
+      }
 
       <h1 class="heading mt-8 text-5xl">Configura<br /><span class="text-volt">el torneo</span></h1>
 
@@ -316,10 +358,13 @@ export class SetupPage {
   protected readonly pin = signal('');
   protected readonly creating = signal(false);
   protected readonly picking = signal(false);
+  protected readonly restored = signal(false);
+  private saving = true;
 
   constructor() {
     // "Revancha" from a finished tournament comes with everything filled in.
     const draft = (history.state as { rematch?: RematchDraft } | null)?.rematch;
+    if (!draft) this.restoreDraft();
     if (draft) {
       this.name.set(draft.name);
       this.players.set(draft.playerNames);
@@ -331,6 +376,67 @@ export class SetupPage {
       this.minuteOverrides.set(draft.config.halfMinutes);
       this.changeover.set(draft.config.changeoverMinutes);
     }
+
+    effect(() => {
+      const snapshot: SetupDraft = {
+        name: this.name(),
+        players: this.players(),
+        clubs: this.clubs(),
+        tiebreakers: this.tiebreakers(),
+        trackScorers: this.trackScorers(),
+        ballonDor: this.ballonDor(),
+        minuteOverrides: this.minuteOverrides(),
+        changeover: this.changeover(),
+        pin: this.pin(),
+      };
+      if (!this.saving) return;
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(snapshot));
+      } catch {
+        /* private mode: the draft lasts for this visit only */
+      }
+    });
+  }
+
+  private restoreDraft(): void {
+    const d = loadDraft();
+    if (!d) return;
+    const strings = (v: unknown): string[] =>
+      Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+    const players = strings(d.players).slice(0, MAX_PARTICIPANTS);
+    const clubs = strings(d.clubs);
+    const known = Object.keys(TIEBREAKER_LABELS);
+    const tiebreakers = strings(d.tiebreakers).filter((c): c is TiebreakCriterion => known.includes(c));
+    const name = typeof d.name === 'string' ? d.name : '';
+    const pin = typeof d.pin === 'string' ? d.pin : '';
+    const changeover = typeof d.changeover === 'number' && d.changeover >= 0 ? d.changeover : null;
+    const overrides = d.minuteOverrides && typeof d.minuteOverrides === 'object' ? d.minuteOverrides : {};
+    // Nothing worth bringing back if the form was left untouched.
+    if (!name && !players.length && !clubs.some((c) => c.trim()) && !pin) return;
+    this.name.set(name);
+    this.players.set(players);
+    this.clubs.set(clubs);
+    if (Array.isArray(d.tiebreakers)) this.tiebreakers.set(tiebreakers);
+    this.trackScorers.set(d.trackScorers === true);
+    this.ballonDor.set(d.ballonDor === true);
+    this.minuteOverrides.set(overrides);
+    if (changeover !== null) this.changeover.set(changeover);
+    this.pin.set(pin);
+    this.restored.set(true);
+  }
+
+  protected discardDraft(): void {
+    this.name.set('');
+    this.players.set([]);
+    this.clubs.set([]);
+    this.tiebreakers.set([...DEFAULT_CONFIG.tiebreakers]);
+    this.trackScorers.set(false);
+    this.ballonDor.set(false);
+    this.minuteOverrides.set({});
+    this.changeover.set(DEFAULT_CONFIG.changeoverMinutes);
+    this.pin.set('');
+    this.restored.set(false);
+    clearDraft();
   }
 
   protected readonly teamCount = computed(() => teamCountFor(this.players().length));
@@ -474,6 +580,8 @@ export class SetupPage {
         },
       });
       await this.store.create(tournament, this.pin());
+      this.saving = false;
+      clearDraft();
       void this.router.navigate(['/t', tournament.id, 'ruleta']);
     } catch (error) {
       this.toast.error(error);
