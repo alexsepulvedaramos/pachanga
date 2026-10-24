@@ -5,10 +5,10 @@ import { Brand } from '../../ui/brand';
 import { TournamentStore } from '../../data/tournament-store';
 import { newTournamentCode } from '../../data/tournament-repository';
 import { ToastService } from '../../ui/toast.service';
-import { HalfMinutes, Phase, TiebreakCriterion } from '../../domain/types';
+import { HalfMinutes, Phase, SoloPartnerRule, TiebreakCriterion } from '../../domain/types';
 import { randomSeed } from '../../domain/rng';
 import { TIEBREAKER_LABELS } from '../../domain/standings';
-import { formatSummary, knockoutPhases, PHASE_LABELS } from '../../domain/knockout';
+import { formatSummary, knockoutFormat, knockoutPhases, PHASE_LABELS } from '../../domain/knockout';
 import {
   allMatchPhases,
   createTournament,
@@ -191,6 +191,43 @@ const CLUB_SUGGESTIONS = [
             (change)="ballonDor.set($any($event.target).checked)"
           />
         </label>
+        @if (soloPartnerAvailable()) {
+          <div class="panel mt-3">
+            <span class="block font-display text-lg font-bold uppercase">Compañero del que va solo</span>
+            <span class="text-sm text-mist">Desde las semifinales (también en la final o el 3.er puesto).</span>
+            <div class="mt-3 grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Compañero del que va solo">
+              <button
+                type="button"
+                role="radio"
+                class="p-3 text-left"
+                [class]="effectiveSoloPartner() === 'draw' ? 'bg-volt text-ink' : 'bg-line text-chalk'"
+                [attr.aria-checked]="effectiveSoloPartner() === 'draw'"
+                (click)="soloPartner.set('draw')"
+              >
+                <span class="block font-display font-bold uppercase">Sorteo en cada partido</span>
+                <span class="text-xs">Como en la liguilla: se sortea entre quienes no juegan.</span>
+              </button>
+              <button
+                type="button"
+                role="radio"
+                class="p-3 text-left disabled:opacity-40"
+                [class]="effectiveSoloPartner() === 'bestEliminated' ? 'bg-volt text-ink' : 'bg-line text-chalk'"
+                [attr.aria-checked]="effectiveSoloPartner() === 'bestEliminated'"
+                [disabled]="!trackScorers()"
+                (click)="soloPartner.set('bestEliminated')"
+              >
+                <span class="block font-display font-bold uppercase">El más goleador del mejor eliminado</span>
+                <span class="text-xs">
+                  Sale del equipo eliminado en {{ firstRoundLabel() }} que mejor quedó en la liguilla; juega el que más goles lleve
+                  y, si empatan, el admin elige o se sortea.
+                  @if (!trackScorers()) {
+                    Hace falta apuntar goleadores.
+                  }
+                </span>
+              </button>
+            </div>
+          </div>
+        }
         <div class="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
           @for (phase of phases(); track phase) {
             <label class="block bg-pitch p-2">
@@ -272,6 +309,7 @@ export class SetupPage {
   protected readonly tiebreakers = signal<TiebreakCriterion[]>([...DEFAULT_CONFIG.tiebreakers]);
   protected readonly trackScorers = signal(false);
   protected readonly ballonDor = signal(false);
+  protected readonly soloPartner = signal<SoloPartnerRule>('draw');
   /** Minutes per half changed by hand; the rest follow the defaults for the number of teams. */
   private readonly minuteOverrides = signal<Partial<HalfMinutes>>({});
   protected readonly changeover = signal(DEFAULT_CONFIG.changeoverMinutes);
@@ -289,6 +327,7 @@ export class SetupPage {
       this.tiebreakers.set(draft.config.tiebreakers);
       this.trackScorers.set(draft.config.trackScorers);
       this.ballonDor.set(!!draft.config.ballonDor);
+      this.soloPartner.set(draft.config.soloPartner ?? 'draw');
       this.minuteOverrides.set(draft.config.halfMinutes);
       this.changeover.set(draft.config.changeoverMinutes);
     }
@@ -304,6 +343,17 @@ export class SetupPage {
     if (!this.validTeamCount()) return ['group', 'playoff', 'semi', 'third', 'final'];
     return [...new Set<Phase>(['group', ...knockoutPhases(this.teamCount())])];
   });
+  /** Someone plays solo and somebody is knocked out before the semi-finals to offer a partner. */
+  protected readonly soloPartnerAvailable = computed(
+    () => this.validTeamCount() && this.players().length % 2 === 1 && knockoutFormat(this.teamCount()).firstRound !== 'semi',
+  );
+  protected readonly firstRoundLabel = computed(() =>
+    this.validTeamCount() && knockoutFormat(this.teamCount()).firstRound === 'quarter' ? 'los cuartos' : 'la repesca',
+  );
+  /** The merit rule needs the goals, and only makes sense when there is a solo player to partner. */
+  protected readonly effectiveSoloPartner = computed<SoloPartnerRule>(() =>
+    this.soloPartnerAvailable() && this.trackScorers() ? this.soloPartner() : 'draw',
+  );
   protected readonly summary = computed(() => formatSummary(this.teamCount()));
   protected readonly validTeamCount = computed(() => {
     const n = this.players().length;
@@ -417,6 +467,7 @@ export class SetupPage {
           tiebreakers: this.tiebreakers(),
           trackScorers: this.trackScorers(),
           ballonDor: this.ballonDor(),
+          soloPartner: this.effectiveSoloPartner(),
           halfMinutes: this.minutes(),
           changeoverMinutes: this.changeover(),
           seed: randomSeed(),

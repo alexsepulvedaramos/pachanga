@@ -81,6 +81,12 @@ export interface HalfMinutes {
   final: number;
 }
 
+/**
+ * Who partners the solo player from the semi-finals on: a stand-in drawn for every match, or the
+ * top scorer of the best-ranked team knocked out before the semi-finals.
+ */
+export type SoloPartnerRule = 'draw' | 'bestEliminated';
+
 export interface TournamentConfig {
   tiebreakers: TiebreakCriterion[];
   trackScorers: boolean;
@@ -91,6 +97,8 @@ export interface TournamentConfig {
   seed: number;
   /** Players vote a Ballon d'Or podium when the tournament ends. Missing in older tournaments. */
   ballonDor?: boolean;
+  /** Missing in older tournaments, which draw a stand-in for every match. */
+  soloPartner?: SoloPartnerRule;
 }
 
 export type Stage = 'setup' | 'draw' | 'groups' | 'knockout' | 'finished';

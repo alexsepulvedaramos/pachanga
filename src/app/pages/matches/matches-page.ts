@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { TournamentSession } from '../../data/tournament-session';
 import { MatchCard } from '../../ui/match-card';
 import { DecisionPanel } from '../../ui/decision-panel';
+import { PartnerPanel } from '../../ui/partner-panel';
 import { ResultForm } from './result-form';
 import { MatchSummary } from './match-summary';
 import { Modal } from '../../ui/modal';
@@ -32,7 +33,7 @@ import { Icon } from '../../ui/icon';
 
 @Component({
   selector: 'app-matches-page',
-  imports: [MatchCard, DecisionPanel, ResultForm, MatchSummary, Modal, RouterLink, MyTurnPanel, BallonDorPanel, ClubCrest, Icon],
+  imports: [MatchCard, DecisionPanel, PartnerPanel, ResultForm, MatchSummary, Modal, RouterLink, MyTurnPanel, BallonDorPanel, ClubCrest, Icon],
   template: `
     @if (session.tournament(); as t) {
       @if (t.stage === 'draw') {
@@ -79,6 +80,7 @@ import { Icon } from '../../ui/icon';
         }
 
         <div class="mt-6"><app-decision-panel /></div>
+        <app-partner-panel />
 
         <!-- Current match -->
         @if (current(); as m) {

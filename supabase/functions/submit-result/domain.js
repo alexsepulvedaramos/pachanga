@@ -393,6 +393,10 @@ function nextMatch(t) {
 function startMatch(t, matchId, rng) {
   const m = match(t, matchId);
   if (m.status === "done") throw new TournamentError("Ese partido ya est\xE1 terminado.");
+  const waiting = pendingPartnerChoice(t);
+  if (waiting && [m.homeId, m.awayId].includes(waiting.teamId)) {
+    throw new TournamentError("Antes hay que decidir qui\xE9n hace pareja con el que va solo.");
+  }
   const standIns = { ...m.standIns };
   for (const teamId of [m.homeId, m.awayId]) {
     if (!needsStandIn(t, m, teamId) || standIns[teamId]) continue;
@@ -448,6 +452,48 @@ function drawStandIn(t, m, teamId, rng) {
   return pick(lowestBy(candidates.length ? candidates : free, key), rng).id;
 }
 var teamIds = (t) => t.teams.map((x) => x.id);
+function partnerSeeker(t) {
+  if (t.config.soloPartner !== "bestEliminated" || t.stage !== "knockout" || !t.groupRanking) return null;
+  const ranking = t.groupRanking;
+  const waiting = t.teams.filter(
+    (x) => !x.knockoutPartnerId && isSolo(t, x.id) && t.matches.some((m) => isLateKnockout(m) && m.status !== "done" && [m.homeId, m.awayId].includes(x.id))
+  );
+  waiting.sort((a, b) => ranking.indexOf(a.id) - ranking.indexOf(b.id));
+  return waiting[0]?.id ?? null;
+}
+function partnerPool(t) {
+  if (!t.groupRanking) return null;
+  const ranking = t.groupRanking;
+  const format = knockoutFormat(ranking.length);
+  if (format.firstRound === "semi") return null;
+  const first = t.matches.filter((m) => m.phase === format.firstRound);
+  if (first.length === 0 || first.some((m) => !winnerOf(m))) return null;
+  const taken = new Set(t.teams.map((x) => x.knockoutPartnerId));
+  const goals = new Map(topScorers(t).map((s) => [s.participantId, s.goals]));
+  const scored = (id) => goals.get(id) ?? 0;
+  const knockedOut = first.map((m) => loserOf(m)).sort((a, b) => ranking.indexOf(a) - ranking.indexOf(b));
+  for (const fromTeamId of knockedOut) {
+    const available = activeMembers(t, fromTeamId).filter((id) => !participant(t, id).noStandIn && !taken.has(id));
+    if (available.length === 0) continue;
+    const best = Math.max(...available.map(scored));
+    return { fromTeamId, playerIds: available.filter((id) => scored(id) === best), goals: best };
+  }
+  return null;
+}
+function pendingPartnerChoice(t) {
+  const teamId = partnerSeeker(t);
+  const pool = teamId ? partnerPool(t) : null;
+  return teamId && pool && pool.playerIds.length > 1 ? { ...pool, teamId } : null;
+}
+function assignPartner(t) {
+  const teamId = partnerSeeker(t);
+  const pool = teamId ? partnerPool(t) : null;
+  if (!teamId || !pool || pool.playerIds.length !== 1) return t;
+  return withKnockoutPartner(t, teamId, pool.playerIds[0]);
+}
+function withKnockoutPartner(t, teamId, participantId) {
+  return { ...t, teams: t.teams.map((x) => x.id === teamId ? { ...x, knockoutPartnerId: participantId } : x) };
+}
 function recordResult(t, matchId, result) {
   const m = match(t, matchId);
   validateResult(t, m, result);
@@ -600,11 +646,21 @@ function sync(t) {
     if (created.length === 0) break;
     next = { ...next, matches: [...next.matches, ...created] };
   }
+  next = assignPartner(next);
   const final = next.matches.find((m) => m.phase === "final");
   const third = next.matches.find((m) => m.phase === "third");
   const thirdDone = third ? !!winnerOf(third) : !knockoutFormat(next.teams.length).thirdPlace;
   if (final && winnerOf(final) && thirdDone) next = { ...next, stage: "finished" };
   return next;
+}
+function topScorers(t) {
+  const counts = /* @__PURE__ */ new Map();
+  for (const m of t.matches) {
+    for (const g of m.goals ?? []) {
+      if (g.scorerId) counts.set(g.scorerId, (counts.get(g.scorerId) ?? 0) + 1);
+    }
+  }
+  return [...counts].map(([participantId, goals]) => ({ participantId, goals })).sort((a, b) => b.goals - a.goals);
 }
 export {
   playerMakeChoice,

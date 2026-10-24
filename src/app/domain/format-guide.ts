@@ -65,6 +65,9 @@ export function formatGuide(t: Tournament): GuideSection[] {
   const format = knockoutFormat(teamCount);
   const total = groupMatchCount(teamCount) + knockoutPhases(teamCount).length;
   const solo = t.participants.length % 2 === 1;
+  // Only when somebody is knocked out before the semi-finals can the partner come from them.
+  const meritPartner = t.config.soloPartner === 'bestEliminated' && format.firstRound !== 'semi';
+  const firstRound = format.firstRound === 'quarter' ? 'los cuartos' : 'la repesca';
 
   const sections: GuideSection[] = [
     {
@@ -100,7 +103,9 @@ export function formatGuide(t: Tournament): GuideSection[] {
       items: [
         ...(solo
           ? [
-              'Al ser impares, uno juega solo: antes de cada partido, final incluida, se le sortea compañero entre quienes no juegan. El invitado juega pero no cuenta como campeón.',
+              meritPartner
+                ? `Al ser impares, uno juega solo: en la liguilla${format.firstRound === 'semi' ? '' : ` y en ${firstRound}`} se le sortea compañero antes de cada partido entre quienes no juegan. Desde las semifinales su compañero, también en la final o el 3.er puesto, sale del equipo eliminado en ${firstRound} que mejor quedó en la liguilla: juega el que más goles lleve en el torneo y, si empatan, el admin elige entre ellos o lo deja a suertes. El invitado juega pero no cuenta como campeón.`
+                : 'Al ser impares, uno juega solo: antes de cada partido, final incluida, se le sortea compañero entre quienes no juegan. El invitado juega pero no cuenta como campeón.',
               'Ese invitado sale del sorteo con prioridad para quien menos se juega: primero los que ya no pueden cambiar su puesto con el resultado, luego los que están lejos en la tabla, y después los que menos veces han sido invitados, no acaban de jugar ni juegan justo después. Si el admin repite el sorteo, no vuelve a salir el descartado y queda anotado en el partido. El admin también puede dejar fuera del sorteo a quien no esté para jugar.',
             ]
           : []),

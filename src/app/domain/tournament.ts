@@ -17,12 +17,14 @@ import { computeStandings, DEFAULT_TIEBREAKERS, StandingRow } from './standings'
 import {
   groupMatchCount,
   KnockoutDecision,
+  loserOf,
   knockoutFormat,
   knockoutPhases,
   MAX_TEAMS,
   MIN_TEAMS,
   nextKnockoutMatches,
   pendingDecision,
+  semiFinalists,
   teamAlive,
   winnerOf,
 } from './knockout';
@@ -297,6 +299,10 @@ export function nextMatch(t: Tournament): Match | null {
 export function startMatch(t: Tournament, matchId: Id, rng: Rng): Tournament {
   const m = match(t, matchId);
   if (m.status === 'done') throw new TournamentError('Ese partido ya está terminado.');
+  const waiting = pendingPartnerChoice(t);
+  if (waiting && [m.homeId, m.awayId].includes(waiting.teamId)) {
+    throw new TournamentError('Antes hay que decidir quién hace pareja con el que va solo.');
+  }
   const standIns: Record<Id, Id> = { ...m.standIns };
   for (const teamId of [m.homeId, m.awayId]) {
     if (!needsStandIn(t, m, teamId) || standIns[teamId]) continue;
@@ -369,6 +375,103 @@ function drawStandIn(t: Tournament, m: Match, teamId: Id, rng: Rng): Id {
 }
 
 const teamIds = (t: Tournament) => t.teams.map((x) => x.id);
+
+// ---------------------------------------------------------------------------------------------
+// Solo player's partner from the semi-finals on
+// ---------------------------------------------------------------------------------------------
+
+/** Who can partner a solo team in the semi-finals and after, when the rule asks for the best eliminated team. */
+export interface PartnerPool {
+  /** Best-ranked team knocked out before the semi-finals that still has someone to offer. */
+  fromTeamId: Id;
+  /** Its players with the most goals in the tournament: more than one means a tie to settle. */
+  playerIds: Id[];
+  goals: number;
+}
+
+/**
+ * The solo team that has to be given its partner for the late knockout, if the rule applies: the
+ * best-ranked one that is through to the semi-finals, still has a match to play there (or in the
+ * third-place match or final), and has no partner yet. It is settled as soon as the playoff is over.
+ */
+function partnerSeeker(t: Tournament): Id | null {
+  if (t.config.soloPartner !== 'bestEliminated' || t.stage !== 'knockout' || !t.groupRanking) return null;
+  const ranking = t.groupRanking;
+  const through = semiFinalists(ranking, t.matches) ?? [];
+  const waiting = t.teams.filter((x) => {
+    if (x.knockoutPartnerId || !isSolo(t, x.id) || !through.includes(x.id)) return false;
+    const late = t.matches.filter((m) => isLateKnockout(m) && [m.homeId, m.awayId].includes(x.id));
+    return late.length === 0 || late.some((m) => m.status !== 'done');
+  });
+  waiting.sort((a, b) => ranking.indexOf(a.id) - ranking.indexOf(b.id));
+  return waiting[0]?.id ?? null;
+}
+
+/**
+ * Once the playoff (or the quarter-finals) is over: of the teams knocked out there, the one that
+ * finished highest in the group stage offers its player with the most goals in the tournament.
+ * Players the admin kept out and those already partnering another team don't count. Null when
+ * nobody was knocked out before the semi-finals (3 and 4 teams) or nobody is left to offer.
+ */
+export function partnerPool(t: Tournament): PartnerPool | null {
+  if (!t.groupRanking) return null;
+  const ranking = t.groupRanking;
+  const format = knockoutFormat(ranking.length);
+  if (format.firstRound === 'semi') return null;
+  const first = t.matches.filter((m) => m.phase === format.firstRound);
+  if (first.length === 0 || first.some((m) => !winnerOf(m))) return null;
+
+  const taken = new Set(t.teams.map((x) => x.knockoutPartnerId));
+  const goals = new Map(topScorers(t).map((s) => [s.participantId, s.goals]));
+  const scored = (id: Id) => goals.get(id) ?? 0;
+  const knockedOut = first.map((m) => loserOf(m)!).sort((a, b) => ranking.indexOf(a) - ranking.indexOf(b));
+  for (const fromTeamId of knockedOut) {
+    const available = activeMembers(t, fromTeamId).filter((id) => !participant(t, id).noStandIn && !taken.has(id));
+    if (available.length === 0) continue;
+    const best = Math.max(...available.map(scored));
+    return { fromTeamId, playerIds: available.filter((id) => scored(id) === best), goals: best };
+  }
+  return null;
+}
+
+/** A tie to settle before the solo team can play: the tied players of the team that offers them. */
+export interface PartnerChoice extends PartnerPool {
+  /** The solo team that gets the partner. */
+  teamId: Id;
+}
+
+export function pendingPartnerChoice(t: Tournament): PartnerChoice | null {
+  const teamId = partnerSeeker(t);
+  const pool = teamId ? partnerPool(t) : null;
+  return teamId && pool && pool.playerIds.length > 1 ? { ...pool, teamId } : null;
+}
+
+/** Gives the solo team its partner as soon as one player is clearly the top scorer of the pool. */
+function assignPartner(t: Tournament): Tournament {
+  const teamId = partnerSeeker(t);
+  const pool = teamId ? partnerPool(t) : null;
+  if (!teamId || !pool || pool.playerIds.length !== 1) return t;
+  return withKnockoutPartner(t, teamId, pool.playerIds[0]);
+}
+
+function withKnockoutPartner(t: Tournament, teamId: Id, participantId: Id): Tournament {
+  return { ...t, teams: t.teams.map((x) => (x.id === teamId ? { ...x, knockoutPartnerId: participantId } : x)) };
+}
+
+/** The admin picks which of the tied players partners the solo team. */
+export function choosePartner(t: Tournament, participantId: Id): Tournament {
+  const waiting = pendingPartnerChoice(t);
+  if (!waiting) throw new TournamentError('No hay ningún compañero pendiente de decidir.');
+  if (!waiting.playerIds.includes(participantId)) throw new TournamentError('Ese jugador no está entre los empatados.');
+  return withKnockoutPartner(t, waiting.teamId, participantId);
+}
+
+/** The tie is left to luck. */
+export function drawPartner(t: Tournament, rng: Rng): Tournament {
+  const waiting = pendingPartnerChoice(t);
+  if (!waiting) throw new TournamentError('No hay ningún compañero pendiente de decidir.');
+  return choosePartner(t, pick(waiting.playerIds, rng));
+}
 
 export function redrawStandIn(t: Tournament, matchId: Id, teamId: Id, rng: Rng): Tournament {
   const m = match(t, matchId);
@@ -693,6 +796,7 @@ export function sync(t: Tournament): Tournament {
     if (created.length === 0) break;
     next = { ...next, matches: [...next.matches, ...created] };
   }
+  next = assignPartner(next);
 
   const final = next.matches.find((m) => m.phase === 'final');
   const third = next.matches.find((m) => m.phase === 'third');
