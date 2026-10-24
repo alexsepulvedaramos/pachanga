@@ -30,7 +30,7 @@ test('a name another phone holds cannot be picked, and a guest can still follow'
   await pickName(page, 'Bea');
 
   // Same tab storage, second visit after letting the name go: Bea is free again.
-  await page.getByRole('button', { name: 'Cambiar' }).click();
+  await page.getByRole('button', { name: 'Cambiar', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Bea', exact: true })).toBeEnabled();
   await pickName(page, 'Bea');
 
