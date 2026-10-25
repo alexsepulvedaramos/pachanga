@@ -33,4 +33,13 @@ describe('formatGuide', () => {
     expect(text(12, { ballonDor: true, trackScorers: true })).toContain('Balón de Oro');
     expect(text(12, { trackScorers: true })).toContain('Bota de Oro');
   });
+  it('explains where the solo player’s partner comes from when the rule asks for the best eliminated team', () => {
+    const merit = text(11, { trackScorers: true, soloPartner: 'bestEliminated' });
+    expect(merit).toContain('eliminado en la repesca que mejor quedó en la liguilla');
+    expect(merit).toContain('el admin elige entre ellos o lo deja a suertes');
+    expect(text(15, { trackScorers: true, soloPartner: 'bestEliminated' })).toContain('eliminado en los cuartos');
+    // With 4 teams nobody is out before the semi-finals: the draw stays.
+    expect(text(7, { trackScorers: true, soloPartner: 'bestEliminated' })).not.toContain('que mejor quedó');
+    expect(text(11)).not.toContain('que mejor quedó');
+  });
 });

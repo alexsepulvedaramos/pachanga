@@ -31,7 +31,8 @@ their own phones or on the TV.
 - **Solo player support.** Before each of their matches the solo player gets a partner drawn from
   whoever isn't playing, favouring those with the least riding on the match (see below), final
   included: nobody plays extra matches as a fixed partner, and a stand-in who plays the final is
-  not a champion. Injuries mid-tournament turn the partner into a solo player automatically.
+  not a champion. Optionally (needs scorers on), from the semi-finals the partner is the top scorer of the best-ranked
+  team knocked out in the playoff or quarter-finals (see below). Injuries mid-tournament turn the partner into a solo player automatically.
 - **Red cards and injuries** of in-game footballers, picked from the club's real squad: they are
   shown as unavailable in that club's next match (the final is exempt) and in the push notification.
 - **Balanced club picker.** Pick a target rating and get clubs from the big five leagues as close
@@ -150,6 +151,15 @@ Where the rulebook leaves room for interpretation, the app does this:
   rather than one fixed partner from the eliminated players: that partner would play extra
   matches and could be champion after losing. Tournaments already under way keep the fixed
   partner they were given.
+- **Solo player's partner by merit (optional):** chosen when the tournament is set up, with an odd
+  number of players, scorers tracked and a playoff or quarter-finals (so not with 7 players).
+  Up to and including the first knockout round the stand-in is drawn as usual. From the
+  semi-finals on, the partner for the semi-final and the final (or third-place match) is the
+  player with the most goals in the tournament from the best group-ranked team knocked out in
+  that first round, and stays the same for those matches. If the two players of that team are
+  level on goals, the admin sees both names (with the option to leave it to luck) and the solo
+  player's match can't start until it's settled. Players the admin kept out of the stand-in list are skipped. Like any
+  stand-in, they don't count as champion.
 - **Champions:** only the members of the winning team, so a stand-in who played the final is not
   listed as champion.
 - **Who can be a stand-in:** a stand-in's own team could gain from the match going one way, so the
